@@ -6,12 +6,12 @@ module.exports = {
 config: {
 name: "gen",
 version: "1.0",
-author: "Rifat | nxo_here",
+author: "nxo_here",
 countDown: 5,
 role: 0,
 shortDescription: { en: "Generate image using prompt" },
 longDescription: { en: "Generate a new image based on your prompt." },
-category: "image",
+category: "AI-IMAGE",
 guide: { en: "{p}gen [prompt]" }
 },
 

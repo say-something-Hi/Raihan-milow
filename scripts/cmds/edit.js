@@ -6,12 +6,12 @@ module.exports = {
 config: {
 name: "edit",
 version: "1.0",
-author: "Rifat | nxo_here",
+author: "nxo_here",
 countDown: 5,
 role: 0,
 shortDescription: { en: "Edit image using prompt" },
 longDescription: { en: "Edit an uploaded image based on your prompt." },
-category: "image",
+category: "AI-IMAGE",
 guide: { en: "{p}edit [prompt] (reply to image)" }
 },
 

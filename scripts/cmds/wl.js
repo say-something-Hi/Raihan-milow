@@ -6,9 +6,9 @@ module.exports = {
     name: "whitelist",
     aliases: ["wl"],
     version: "1.6",
-    author: "NTKhang + Modified by Rifat",
+    author: "NTKhang",
     countDown: 5,
-    role: 0,
+    role: 2,
     shortDescription: {
       vi: "Bật/tắt, thêm, xóa quyền whiteListIds",
       en: "Toggle, add, remove whiteListIds role"

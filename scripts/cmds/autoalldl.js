@@ -1,85 +1,93 @@
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
-
-let isEnabled = true; // default: on
+const axios = require('axios');
+const ok = 'xyz';
 
 module.exports = {
   config: {
     name: "alldl",
-    version: "1.1",
-    author: "nexo_here + Modified by Rifat",
+    aliases: ["download"],
+    version: "1.6",
+    author: "Team Calyx",
+    countDown: 5,
     role: 0,
-    shortDescription: "Auto download media from supported links (no prefix)",
-    longDescription: "Auto detects media links (Instagram, TikTok, etc) and downloads them",
+    longDescription: "Download Videos from various Sources.",
     category: "media",
-    guide: "Send or reply with a link. No prefix needed.\nUse {p}alldl on/off to toggle feature."
+    guide: { en: { body: "{pn} [video link]" } }
   },
 
-  onStart: async function ({ message, args, event }) {
-    const permission = ["100014657416389"]; // <-- শুধু মালিকরা টগল করতে পারবে
-    if (["on", "off", "status"].includes(args[0])) {
-      if (!permission.includes(event.senderID)) return message.reply("⚠️ | Only the bot owner can toggle this feature.");
+  onStart: async function({ message, args, event, threadsData, role }) {
+    let videoUrl = args.join(" ");
 
-      if (args[0] === "on") {
-        isEnabled = true;
-        return message.reply("✅ | Auto media downloader is now ENABLED.");
-      }
-
-      if (args[0] === "off") {
-        isEnabled = false;
-        return message.reply("❌ | Auto media downloader is now DISABLED.");
-      }
-
-      if (args[0] === "status") {
-        return message.reply(`🔄 | Current status: ${isEnabled ? "ENABLED ✅" : "DISABLED ❌"}`);
+    if ((args[0] === 'chat' && (args[1] === 'on' || args[1] === 'off')) || args[0] === 'on' || args[0] === 'off') {
+      if (role >= 1) {
+        const choice = args[0] === 'on' || args[1] === 'on';
+        await threadsData.set(event.threadID, { data: { autoDownload: choice } });
+        return message.reply(`Auto-download has been turned ${choice ? 'on' : 'off'} for this group.`);
+      } else {
+        return message.reply("You don't have permission to toggle auto-download.");
       }
     }
 
-    const dir = path.join(__dirname, "cache");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    if (!videoUrl) {
+      if (event.messageReply && event.messageReply.body) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const foundURLs = event.messageReply.body.match(urlRegex);
+        if (foundURLs && foundURLs.length > 0) {
+          videoUrl = foundURLs[0];
+        } else {
+          return message.reply("No URL found. Please provide a valid URL.");
+        }
+      } else {
+        return message.reply("Please provide a URL to start downloading.");
+      }
+    }
+
+    message.reaction("⏳", event.messageID);
+    await download({ videoUrl, message, event });
   },
 
-  onChat: async function ({ api, event }) {
-    if (!isEnabled) return;
-
-    const text = event.body || (event.messageReply && event.messageReply.body);
-    if (!text) return;
-
-    const urlMatch = text.match(/https?:\/\/[^\s]+/);
-    if (!urlMatch) return;
-
-    const url = urlMatch[0];
-    const apiUrl = `https://smfahim.xyz/alldl?url=${encodeURIComponent(url)}`;
+  onChat: async function({ event, message, threadsData }) {
+    const threadData = await threadsData.get(event.threadID);
+    if (!threadData.data.autoDownload || threadData.data.autoDownload === false || event.senderID === global.botID) return;
 
     try {
-      api.setMessageReaction("⏳", event.messageID, () => {}, true);
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const foundURLs = event.body.match(urlRegex);
 
-      const res = await axios.get(apiUrl);
-      const result = res.data;
-
-      if (!result.status || !result.links || (!result.links.hd && !result.links.sd)) {
-        api.setMessageReaction("❌", event.messageID, () => {}, true);
-        return;
+      if (foundURLs && foundURLs.length > 0) {
+        const videoUrl = foundURLs[0];
+        message.reaction("⏳", event.messageID); 
+        await download({ videoUrl, message, event });
       }
-
-      const mediaUrl = result.links.hd || result.links.sd;
-      const fileName = `download.mp4`;
-      const filePath = path.join(__dirname, "cache", fileName);
-
-      const file = await axios.get(mediaUrl, { responseType: "arraybuffer" });
-      fs.writeFileSync(filePath, Buffer.from(file.data, "binary"));
-
-      api.sendMessage({
-        attachment: fs.createReadStream(filePath)
-      }, event.threadID, () => {
-        fs.unlinkSync(filePath);
-        api.setMessageReaction("✅", event.messageID, () => {}, true);
-      }, event.messageID);
-
-    } catch (err) {
-      console.error("[alldl] Error:", err.message);
-      api.setMessageReaction("❌", event.messageID, () => {}, true);
+    } catch (error) {
+      //message.reaction("❌", event.messageID);
+      console.error("onChat Error:", error);
     }
   }
 };
+
+async function download({ videoUrl, message, event }) {
+  try {
+    const apiResponse = await axios.get(`https://smfahim.${ok}/alldl?url=${encodeURIComponent(videoUrl)}`);
+    const videoData = apiResponse.data;
+
+    if (!videoData || !videoData.links) {
+      throw new Error("Invalid response from API.");
+    }
+
+    const videoStream = await axios({
+      method: 'get',
+      url: videoData.links.sd || videoData.links.hd,
+      responseType: 'stream'
+    });
+
+    message.reaction("✅", event.messageID);
+
+    message.reply({
+      body: `${videoData.title}`,
+      attachment: videoStream.data
+    });
+  } catch (error) {
+    message.reaction("❌", event.messageID);
+    console.error("Download Error:", error);
+  }
+}

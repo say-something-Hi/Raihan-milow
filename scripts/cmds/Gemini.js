@@ -1,66 +1,180 @@
 const axios = require("axios");
 
-module.exports = {
-  config: {
-    name: "gemini",
-    aliases: ["gmn"],
-    version: "1.2",
-    author: "nexo_here",
-    shortDescription: "Gemini AI with image & text support",
-    longDescription: "Send text or image to Gemini API and get AI response.",
-    category: "ai",
-    guide: "{pn}gemini <text question> or reply to an image",
-  },
+// ⚠️ Keep your API key safe — don't expose it publicly
+const GEMINI_API_KEY = "AIzaSyAXoP6bgNnxSznqBGzhKCTEy4pDkzoceek";
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
-  onStart: async function({ api, event, args }) {
-    const uid = 1;
-    const apikey = "66e0cfbb-62b8-4829-90c7-c78cacc72ae2";
+module.exports.config = {
+  name: "gemini",
+  version: "1.0.0",
+  role: 0,
+  author: "Raihan",
+  description: "Gemini 2.0 Flash AI with direct API integration and multiple conversation support",
+  usePrefix: true,
+  guide: "[message]",
+  category: "ai",
+  coolDowns: 5,
+};
 
-    // Check if reply to an image
-    let isReplyToImage = false;
-    let imageUrl = "";
+const conversationHistory = new Map();
 
-    if (
-      event.messageReply &&
-      event.messageReply.attachments &&
-      event.messageReply.attachments.length > 0 &&
-      event.messageReply.attachments[0].type === "photo"
-    ) {
-      isReplyToImage = true;
-      imageUrl = event.messageReply.attachments[0].url;
-    }
+function getConversationHistory(senderID) {
+  if (!conversationHistory.has(senderID)) {
+    conversationHistory.set(senderID, []);
+  }
+  return conversationHistory.get(senderID);
+}
 
-    let payloadUrl = "";
-    if (isReplyToImage) {
-      // Send image url in ask param (or if API supports base64, can do that)
-      // Here assuming API accepts image URL in `ask` param
-      payloadUrl = `https://kaiz-apis.gleeze.com/api/gemini-pro?ask=${encodeURIComponent(imageUrl)}&uid=${uid}&apikey=${apikey}`;
+function updateConversationHistory(senderID, role, text) {
+  const history = getConversationHistory(senderID);
+  history.push({
+    parts: [{ text: text }],
+    role: role,
+  });
+  if (history.length > 20) {
+    history.shift();
+  }
+}
+
+module.exports.onReply = async function ({ api, event, Reply }) {
+  const { author } = Reply;
+  if (author !== event.senderID) return;
+
+  const uid = event.senderID;
+  const userMessage = event.body.toLowerCase();
+
+  try {
+    const history = getConversationHistory(uid);
+    updateConversationHistory(uid, "user", userMessage);
+
+    const requestBody = {
+      contents: [
+        ...history,
+        {
+          parts: [{ text: userMessage }],
+          role: "user",
+        },
+      ],
+    };
+
+    const response = await axios.post(GEMINI_API_URL, requestBody, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const aiResponse = response.data.candidates[0].content.parts[0].text;
+
+    updateConversationHistory(uid, "model", aiResponse);
+
+    const styledMessage =
+      `💬 Gemini Responds:\n` +
+      `──────────────────────────────\n` +
+      `${aiResponse}\n` +
+      `──────────────────────────────\n` +
+      `━ by Raihan`;
+
+    await api.sendMessage(
+      styledMessage,
+      event.threadID,
+      (error, info) => {
+        if (!error) {
+          global.GoatBot.onReply.set(info.messageID, {
+            commandName: this.config.name,
+            type: "reply",
+            messageID: info.messageID,
+            author: event.senderID,
+          });
+        }
+      },
+      event.messageID
+    );
+  } catch (error) {
+    console.error(`Error in gemini onReply: ${error.message}`);
+    if (error.response && error.response.data) {
+      api.sendMessage(
+        `❌ Error: ${error.response.data.error.message}`,
+        event.threadID,
+        event.messageID
+      );
     } else {
-      if (args.length === 0) {
-        return api.sendMessage(
-          "❌ Please provide a question or reply to an image with a question.",
-          event.threadID,
-          event.messageID
-        );
-      }
-      const textQuery = args.join(" ");
-      payloadUrl = `https://kaiz-apis.gleeze.com/api/gemini-pro?ask=${encodeURIComponent(textQuery)}&uid=${uid}&apikey=${apikey}`;
-    }
-
-    try {
-      const res = await axios.get(payloadUrl);
-      if (res.data && res.data.response) {
-        return api.sendMessage(`\n${res.data.response}`, event.threadID, event.messageID);
-      } else {
-        return api.sendMessage("⚠️ No valid response from Gemini API.", event.threadID, event.messageID);
-      }
-    } catch (err) {
-      console.error("Gemini API error:", err);
-      return api.sendMessage(
-        "❌ Failed to contact Gemini API. Please try again later.",
+      api.sendMessage(
+        `❌ Unexpected error: ${error.message}`,
         event.threadID,
         event.messageID
       );
     }
-  },
+  }
+};
+
+module.exports.onStart = async function ({ api, args, event }) {
+  const uid = event.senderID;
+  const userMessage = args.join(" ").toLowerCase();
+
+  try {
+    if (!userMessage) {
+      api.sendMessage(
+        "Please provide a question for Gemini 2.0 Flash.\n\nExample:\ngemini What is the capital of Bangladesh?",
+        event.threadID,
+        event.messageID
+      );
+      return;
+    }
+
+    conversationHistory.set(uid, []);
+    updateConversationHistory(uid, "user", userMessage);
+
+    const requestBody = {
+      contents: [
+        {
+          parts: [{ text: userMessage }],
+          role: "user",
+        },
+      ],
+    };
+
+    const response = await axios.post(GEMINI_API_URL, requestBody, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const aiResponse = response.data.candidates[0].content.parts[0].text;
+
+    updateConversationHistory(uid, "model", aiResponse);
+
+    const styledMessage =
+      `💬 Gemini Responds:\n` +
+      `──────────────────────────────\n` +
+      `${aiResponse}\n` +
+      `──────────────────────────────\n` +
+      `━ by Raihan`;
+
+    await api.sendMessage(
+      { body: styledMessage },
+      event.threadID,
+      (error, info) => {
+        if (!error) {
+          global.GoatBot.onReply.set(info.messageID, {
+            commandName: this.config.name,
+            type: "reply",
+            messageID: info.messageID,
+            author: event.senderID,
+          });
+        }
+      },
+      event.messageID
+    );
+  } catch (error) {
+    console.error(`Error in gemini onStart: ${error.message}`);
+    if (error.response && error.response.data) {
+      api.sendMessage(
+        `❌ Error: ${error.response.data.error.message}`,
+        event.threadID,
+        event.messageID
+      );
+    } else {
+      api.sendMessage(
+        `❌ Unexpected error: ${error.message}`,
+        event.threadID,
+        event.messageID
+      );
+    }
+  }
 };

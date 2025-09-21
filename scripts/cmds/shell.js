@@ -1,56 +1,33 @@
-const { GoatWrapper } = require("fca-liane-utils");
-const util = require('util');
-const exec = util.promisify(require('child_process').exec);
+const { exec } = require("child_process");
 
 module.exports = {
   config: {
-    name: 'shell',
-    aliases: ['$', '%'],
-    version: '1.0',
-    author: 'nexo_here',
-    role: 2,
-    category: 'owner',
-    shortDescription: {
-      en: 'Executes terminal commands.',
-    },
-    longDescription: {
-      en: 'Executes terminal commands and returns the output.',
-    },
-    guide: {
-      en: '{pn} [command]',
-    },
+    name: "shell",
+aliases: ["sh"],
+    version: "1.0",
+    author: "nexo_here",
+    shortDescription: { en: "Run shell commands (admin only)" },
+    longDescription: { en: "Execute shell commands and reply only with output" },
+    category: "system",
+    role: 2, // admin only
+    guide: { en: "{pn} <command>" }
   },
-  onStart: async function ({ api, args, message, event }) {
-    const permission = global.GoatBot.config.owner;
-    if (!permission.includes(event.senderID)) {
-      api.sendMessage(
-        "Bokachoda 😂",
-        event.threadID,
-        event.messageID
-      );
-      return;
-    }
-    if (args.length === 0) {
-      message.reply('Usage: {pn} [command]');
-      return;
-    }
 
-    const command = args.join(' ');
+  onStart: async function({ message, args }) {
+    if (!args.length) return message.reply("Please provide a shell command.");
 
-    try {
-      const { stdout, stderr } = await exec(command);
+    const command = args.join(" ");
 
-      if (stderr) {
-        message.reply(`${stderr}`); // Fixed string interpolation
-      } else {
-        message.reply(`${stdout}`); // Fixed string interpolation
+    exec(command, { timeout: 15000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+      if (error) return message.reply(error.message || stderr || "Error occurred");
+
+      let output = stdout || stderr || "No output";
+
+      if (output.length > 1900) {
+        output = output.slice(0, 1900) + "\n...Output truncated...";
       }
-    } catch (error) {
-      console.error(error);
-      message.reply(`Error: ${error.message}`); // Fixed string interpolation
-    }
-  },
-};
 
-const wrapper = new GoatWrapper(module.exports);
-wrapper.applyNoPrefix({ allowPrefix: true });
+      return message.reply(output);
+    });
+  }
+};
