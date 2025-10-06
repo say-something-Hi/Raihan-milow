@@ -1,7 +1,5 @@
 const fs = require("fs-extra");
 const nullAndUndefined = [undefined, null];
-// const { config } = global.GoatBot;
-// const { utils } = global;
 
 function getType(obj) {
 	return Object.prototype.toString.call(obj).slice(8, -1);
@@ -61,12 +59,6 @@ function getRoleConfig(utils, command, isGroup, threadData, commandName) {
 	}
 
 	return roleConfig;
-	// {
-	// 	onChat,
-	// 	onStart,
-	// 	onReaction,
-	// 	onReply
-	// }
 }
 
 function isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, commandName, message, lang) {
@@ -149,7 +141,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 
 		const { body, messageID, threadID, isGroup } = event;
 
-		// Check if has threadID
 		if (!threadID)
 			return;
 
@@ -215,6 +206,23 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			// —————————————— CHECK USE BOT —————————————— //
 			if (!body || !body.startsWith(prefix))
 				return;
+
+			// ✅ Feature 2: Prefix Only Text Response
+			// Check if message is just the prefix with no command
+			if (body.trim() === prefix.trim()) {
+				const prefixOnlyResponses = [
+					"That's just my prefix. Try /help to see all available commands",
+					"Try a command like /help",
+					"Looking for something? Try /gpt",
+					"Need help? Use /help for commands!",
+					"This is my prefix only, try /hgen",
+					"Just the prefix won't do! Try /help",
+					"⚠️ Add a command after the prefix!"
+				];
+				const randomResponse = prefixOnlyResponses[Math.floor(Math.random() * prefixOnlyResponses.length)];
+				return await message.reply(randomResponse);
+			}
+
 			const dateNow = Date.now();
 			const args = body.slice(prefix.length).trim().split(/ +/);
 			// ————————————  CHECK HAS COMMAND ——————————— //
@@ -231,6 +239,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			// ————————————— SET COMMAND NAME ————————————— //
 			if (command)
 				commandName = command.config.name;
+
 			// ——————— FUNCTION REMOVE COMMAND NAME ———————— //
 			function removeCommandNameFromBody(body_, prefix_, commandName_) {
 				if (arguments.length) {
@@ -247,18 +256,72 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 					return body.replace(new RegExp(`^${prefix}(\\s+|)${commandName}`, "i"), "").trim();
 				}
 			}
+
 			// —————  CHECK BANNED OR ONLY ADMIN BOX  ————— //
 			if (isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, commandName, message, langCode))
 				return;
-			if (!command)
-				if (!hideNotiMessage.commandNotFound)
+
+			if (!command) {
+				// ✅ Feature 3: Wrong Command Suggestion
+				if (commandName && !hideNotiMessage.commandNotFound) {
+					const allCommands = Array.from(GoatBot.commands.keys());
+					const allAliases = Array.from(GoatBot.aliases.keys());
+					const allAvailableCommands = [...allCommands, ...allAliases];
+
+					// Simple Levenshtein distance function
+					function levenshteinDistance(str1, str2) {
+						const matrix = [];
+						for (let i = 0; i <= str2.length; i++) matrix[i] = [i];
+						for (let j = 0; j <= str1.length; j++) matrix[0][j] = j;
+						for (let i = 1; i <= str2.length; i++) {
+							for (let j = 1; j <= str1.length; j++) {
+								const cost = str1[j - 1] === str2[i - 1] ? 0 : 1;
+								matrix[i][j] = Math.min(
+									matrix[i - 1][j] + 1,      // Deletion
+									matrix[i][j - 1] + 1,      // Insertion
+									matrix[i - 1][j - 1] + cost // Substitution
+								);
+							}
+						}
+						return matrix[str2.length][str1.length];
+					}
+
+					let bestMatch = null;
+					let minDistance = Infinity;
+
+					for (const availableCommand of allAvailableCommands) {
+						const distance = levenshteinDistance(commandName, availableCommand);
+						if (distance < minDistance) {
+							minDistance = distance;
+							bestMatch = availableCommand;
+						}
+					}
+
+					// Suggest command if the typo is close enough (e.g., distance <= 2)
+					if (bestMatch && minDistance <= 2) {
+						return await message.reply(
+							`Command "${commandName}" not found.\nDid you mean: "${prefix}${bestMatch}"?`
+						);
+					}
+				}
+				// Fallback to the original message if no good suggestion is found
+				if (!hideNotiMessage.commandNotFound) {
 					return await message.reply(
 						commandName ?
 							utils.getText({ lang: langCode, head: "handlerEvents" }, "commandNotFound", commandName, prefix) :
 							utils.getText({ lang: langCode, head: "handlerEvents" }, "commandNotFound2", prefix)
 					);
-				else
-					return true;
+				}
+				return true;
+			}
+
+			// ————— CHECK GROUP AUTHORIZATION ————— //
+			if (isGroup && !config.adminBot.includes(senderID)) {
+				if (commandName !== "approve" && threadData.data.groupApproved !== true) {
+					return await message.reply("⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval.");
+				}
+			}
+
 			// ————————————— CHECK PERMISSION ———————————— //
 			const roleConfig = getRoleConfig(utils, command, isGroup, threadData, commandName);
 			const needRole = roleConfig.onStart;
@@ -490,8 +553,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		}
 
 
-		/* 
-		 +------------------------------------------------+
+		/* +------------------------------------------------+
 		 |                    ON REPLY                    |
 		 +------------------------------------------------+
 		*/
@@ -512,6 +574,13 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			if (!command) {
 				message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "cannotFindCommand", commandName));
 				return log.err("onReply", `Command "${commandName}" not found`, Reply);
+			}
+
+			// ————— CHECK GROUP AUTHORIZATION ————— //
+			if (isGroup && !config.adminBot.includes(senderID)) {
+				if (commandName !== "approve" && threadData.data.groupApproved !== true) {
+					return await message.reply("⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval.");
+				}
 			}
 
 			// —————————————— CHECK PERMISSION —————————————— //
@@ -560,6 +629,17 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		 +------------------------------------------------+
 		*/
 		async function onReaction() {
+			// ✅ Feature 1: Admin Reaction Unsend
+			if (event.reaction === "😠" && role >= 1) {
+				try {
+					await api.unsendMessage(messageID);
+					log.info("ADMIN UNSEND", `Message ${messageID} unsent by admin ${senderID}`);
+					return; // Exit early
+				} catch (err) {
+					log.err("ADMIN UNSEND", `Failed to unsend message ${messageID}`, err);
+				}
+			}
+
 			const { onReaction } = GoatBot;
 			const Reaction = onReaction.get(messageID);
 			if (!Reaction)
@@ -574,6 +654,13 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			if (!command) {
 				message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "cannotFindCommand", commandName));
 				return log.err("onReaction", `Command "${commandName}" not found`, Reaction);
+			}
+			
+			// ————— CHECK GROUP AUTHORIZATION ————— //
+			if (isGroup && !config.adminBot.includes(senderID)) {
+				if (commandName !== "approve" && threadData.data.groupApproved !== true) {
+					return await message.reply("⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval.");
+				}
 			}
 
 			// —————————————— CHECK PERMISSION —————————————— //
