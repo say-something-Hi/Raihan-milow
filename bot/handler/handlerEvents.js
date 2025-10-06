@@ -61,6 +61,17 @@ function getRoleConfig(utils, command, isGroup, threadData, commandName) {
 	return roleConfig;
 }
 
+// ✅ REFACTORED HELPER FUNCTION TO AVOID DUPLICATION
+async function checkGroupAuthorization(isGroup, config, senderID, commandName, threadData, message) {
+	if (isGroup && !config.adminBot.includes(senderID)) {
+		if (commandName !== "approve" && threadData.data.groupApproved !== true) {
+			await message.reply("⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval.");
+			return true; // Indicates check failed, execution should stop
+		}
+	}
+	return false; // Indicates check passed
+}
+
 function isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, commandName, message, lang) {
 	const config = global.GoatBot.config;
 	const { adminBot, hideNotiMessage } = config;
@@ -207,8 +218,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			if (!body || !body.startsWith(prefix))
 				return;
 
-			// ✅ Feature 2: Prefix Only Text Response
-			// Check if message is just the prefix with no command
+			// ✅ Feature: Prefix Only Text Response
 			if (body.trim() === prefix.trim()) {
 				const prefixOnlyResponses = [
 					"That's just my prefix. Try /help to see all available commands",
@@ -262,13 +272,12 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 				return;
 
 			if (!command) {
-				// ✅ Feature 3: Wrong Command Suggestion
+				// ✅ Feature: Wrong Command Suggestion
 				if (commandName && !hideNotiMessage.commandNotFound) {
 					const allCommands = Array.from(GoatBot.commands.keys());
 					const allAliases = Array.from(GoatBot.aliases.keys());
 					const allAvailableCommands = [...allCommands, ...allAliases];
 
-					// Simple Levenshtein distance function
 					function levenshteinDistance(str1, str2) {
 						const matrix = [];
 						for (let i = 0; i <= str2.length; i++) matrix[i] = [i];
@@ -297,14 +306,12 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 						}
 					}
 
-					// Suggest command if the typo is close enough (e.g., distance <= 2)
 					if (bestMatch && minDistance <= 2) {
 						return await message.reply(
 							`Command "${commandName}" not found.\nDid you mean: "${prefix}${bestMatch}"?`
 						);
 					}
 				}
-				// Fallback to the original message if no good suggestion is found
 				if (!hideNotiMessage.commandNotFound) {
 					return await message.reply(
 						commandName ?
@@ -316,11 +323,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			}
 
 			// ————— CHECK GROUP AUTHORIZATION ————— //
-			if (isGroup && !config.adminBot.includes(senderID)) {
-				if (commandName !== "approve" && threadData.data.groupApproved !== true) {
-					return await message.reply("⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval.");
-				}
-			}
+			if (await checkGroupAuthorization(isGroup, config, senderID, commandName, threadData, message)) return;
 
 			// ————————————— CHECK PERMISSION ———————————— //
 			const roleConfig = getRoleConfig(utils, command, isGroup, threadData, commandName);
@@ -354,7 +357,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			const time = getTime("DD/MM/YYYY HH:mm:ss");
 			isUserCallCommand = true;
 			try {
-				// analytics command call
 				(async () => {
 					const analytics = await globalData.get("analytics", "data", {});
 					if (!analytics[commandName])
@@ -396,7 +398,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 					continue;
 				const commandName = command.config.name;
 
-				// —————————————— CHECK PERMISSION —————————————— //
 				const roleConfig = getRoleConfig(utils, command, isGroup, threadData, commandName);
 				const needRole = roleConfig.onChat;
 				if (needRole > role)
@@ -408,7 +409,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 
 				if (getType(command.onChat) == "Function") {
 					const defaultOnChat = command.onChat;
-					// convert to AsyncFunction
 					command.onChat = async function () {
 						return defaultOnChat(...arguments);
 					};
@@ -466,7 +466,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 
 				if (getType(command.onAnyEvent) == "Function") {
 					const defaultOnAnyEvent = command.onAnyEvent;
-					// convert to AsyncFunction
 					command.onAnyEvent = async function () {
 						return defaultOnAnyEvent(...arguments);
 					};
@@ -520,7 +519,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 
 				if (getType(command.onFirstChat) == "Function") {
 					const defaultOnFirstChat = command.onFirstChat;
-					// convert to AsyncFunction
 					command.onFirstChat = async function () {
 						return defaultOnFirstChat(...arguments);
 					};
@@ -577,11 +575,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			}
 
 			// ————— CHECK GROUP AUTHORIZATION ————— //
-			if (isGroup && !config.adminBot.includes(senderID)) {
-				if (commandName !== "approve" && threadData.data.groupApproved !== true) {
-					return await message.reply("⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval.");
-				}
-			}
+			if (await checkGroupAuthorization(isGroup, config, senderID, commandName, threadData, message)) return;
 
 			// —————————————— CHECK PERMISSION —————————————— //
 			const roleConfig = getRoleConfig(utils, command, isGroup, threadData, commandName);
@@ -629,12 +623,12 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		 +------------------------------------------------+
 		*/
 		async function onReaction() {
-			// ✅ Feature 1: Admin Reaction Unsend
+			// ✅ Feature: Admin Reaction Unsend
 			if (event.reaction === "😠" && role >= 1) {
 				try {
 					await api.unsendMessage(messageID);
 					log.info("ADMIN UNSEND", `Message ${messageID} unsent by admin ${senderID}`);
-					return; // Exit early
+					return;
 				} catch (err) {
 					log.err("ADMIN UNSEND", `Failed to unsend message ${messageID}`, err);
 				}
@@ -655,13 +649,9 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 				message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "cannotFindCommand", commandName));
 				return log.err("onReaction", `Command "${commandName}" not found`, Reaction);
 			}
-			
+
 			// ————— CHECK GROUP AUTHORIZATION ————— //
-			if (isGroup && !config.adminBot.includes(senderID)) {
-				if (commandName !== "approve" && threadData.data.groupApproved !== true) {
-					return await message.reply("⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval.");
-				}
-			}
+			if (await checkGroupAuthorization(isGroup, config, senderID, commandName, threadData, message)) return;
 
 			// —————————————— CHECK PERMISSION —————————————— //
 			const roleConfig = getRoleConfig(utils, command, isGroup, threadData, commandName);
@@ -677,7 +667,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 					return true;
 				}
 			}
-			// —————————————————————————————————————————————— //
 
 			const time = getTime("DD/MM/YYYY HH:mm:ss");
 			try {
@@ -761,7 +750,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 
 				if (getType(command.onEvent) == "Function") {
 					const defaultOnEvent = command.onEvent;
-					// convert to AsyncFunction
 					command.onEvent = async function () {
 						return defaultOnEvent(...arguments);
 					};
