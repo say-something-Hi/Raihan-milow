@@ -78,7 +78,7 @@ module.exports = {
   config: {
     name: "guess",
     version: "4.0",
-    author: "XNil (Upgraded by Coding Partner)",
+    author: "RaiHan",
     countDown: 5,
     role: 0,
     category: "game",
