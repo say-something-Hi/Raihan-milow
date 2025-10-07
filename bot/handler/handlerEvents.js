@@ -65,7 +65,7 @@ function getRoleConfig(utils, command, isGroup, threadData, commandName) {
 async function checkGroupAuthorization(isGroup, config, senderID, commandName, threadData, message) {
 	if (isGroup && !config.adminBot.includes(senderID)) {
 		if (commandName !== "approve" && threadData.data.groupApproved !== true) {
-			await message.reply("⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval. /n Or Join BOT support group to place your approval https://m.me/j/AbYP0EG_FgmtmJ99/");
+			await message.reply("⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval. \n  Or Join BOT support group to place your approval https://m.me/j/AbYP0EG_FgmtmJ99/");
 			return true; // Indicates check failed, execution should stop
 		}
 	}
