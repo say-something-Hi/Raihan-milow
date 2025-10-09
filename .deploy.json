@@ -1,10 +1,14 @@
 [
     {
         "task": "command",
-        "command": "cd /home/mykitche/Bdraihanily/Raihan_premium- && npm install --production"
+        "command": "cd /home/mykitche/git/Raihan_premium- && git pull"
     },
     {
         "task": "command",
-        "command": "cd /home/mykitche/Bdraihanily/Raihan_premium- && pm2 start index.js --name Raihan-Bot --interpreter node && pm2 save"
+        "command": "cd /home/mykitche/git/Raihan_premium- && npm install --production"
+    },
+    {
+        "task": "command",
+        "command": "cd /home/mykitche/git/Raihan_premium- && pm2 restart Raihan-Bot || pm2 start index.js --name Raihan-Bot --interpreter node && pm2 save"
     }
 ]
