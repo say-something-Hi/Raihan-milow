@@ -1,8 +1,10 @@
-{
-  "DEPLOYPATH": "/home/mykitche/Raihan_premium-.git",
-  "task": {
-    "0": "index.js",
-    "1": "scripts",
-    "2": "modules"
-  }
-}
+[
+    {
+        "task": "command",
+        "command": "cd /home/mykitche/Bdraihanily/Raihan_premium- && npm install --production"
+    },
+    {
+        "task": "command",
+        "command": "cd /home/mykitche/Bdraihanily/Raihan_premium- && pm2 start index.js --name Raihan-Bot --interpreter node --cron-restart='0 0 * * *' --no-autorestart && pm2 save"
+    }
+]
