@@ -1,0 +1,8 @@
+{
+  "DEPLOYPATH": "/home/mykitche/public_html",
+  "task": {
+    "0": "index.js",
+    "1": "scripts",
+    "2": "modules"
+  }
+}
