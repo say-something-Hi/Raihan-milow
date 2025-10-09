@@ -5,6 +5,6 @@
     },
     {
         "task": "command",
-        "command": "cd /home/mykitche/Bdraihanily/Raihan_premium- && pm2 start index.js --name Raihan-Bot --interpreter node --cron-restart='0 0 * * *' --no-autorestart && pm2 save"
+        "command": "cd /home/mykitche/Bdraihanily/Raihan_premium- && pm2 start index.js --name Raihan-Bot --interpreter node && pm2 save"
     }
 ]
