@@ -98,13 +98,24 @@ function listenMqtt(defaultFuncs, api, ctx, globalCallback) {
         options.wsOptions.agent = agent;
     }
 
+    // create client and store on ctx
     ctx.mqttClient = new mqtt.Client(_ => websocket(host, options.wsOptions), options);
 
-    global.mqttClient = ctx.mqttClient;
+    // keep a local reference for cleaner code
+    const mqttClient = ctx.mqttClient;
+
+    // also expose globally if needed by other modules (legacy)
+    try {
+        global.mqttClient = ctx.mqttClient;
+    } catch (e) {
+        // in some sandboxes global may be read-only - ignore
+    }
 
     mqttClient.on('error', function (err) {
         log.error("listenMqtt", err);
-        mqttClient.end();
+        try {
+            mqttClient.end();
+        } catch (e) { }
         if (ctx.globalOptions.autoReconnect) getSeqID();
         else globalCallback({ type: "stop_listen", error: "Connection refused: Server unavailable" }, null);
     });
@@ -135,16 +146,18 @@ function listenMqtt(defaultFuncs, api, ctx, globalCallback) {
         mqttClient.publish(topic, JSON.stringify(queue), { qos: 1, retain: false });
 
         var rTimeout = setTimeout(function () {
-            mqttClient.end();
+            try { mqttClient.end(); } catch (e) { }
             getSeqID();
         }, 5000);
 
         ctx.tmsWait = function () {
             clearTimeout(rTimeout);
-            ctx.globalOptions.emitReady ? globalCallback({
-                type: "ready",
-                error: null
-            }) : "";
+            if (ctx.globalOptions.emitReady) {
+                globalCallback({
+                    type: "ready",
+                    error: null
+                });
+            }
             delete ctx.tmsWait;
         };
     });
@@ -228,18 +241,18 @@ function parseDelta(defaultFuncs, api, ctx, globalCallback, v) {
                     }
                 }
                 return !ctx.globalOptions.selfListen &&
-                    (fmtMsg.senderID === ctx.i_userID || fmtMsg.senderID === ctx.userID) ?
+                    (fmtMsg && (fmtMsg.senderID === ctx.i_userID || fmtMsg.senderID === ctx.userID)) ?
                     undefined :
                     (function () { globalCallback(null, fmtMsg); })();
             } else {
-                if (v.delta.attachments[i].mercury.attach_type == "photo") {
+                if (v.delta.attachments[i].mercury && v.delta.attachments[i].mercury.attach_type == "photo") {
                     api.resolvePhotoUrl(
                         v.delta.attachments[i].fbid,
                         (err, url) => {
                             if (!err)
                                 v.delta.attachments[
                                     i
-                                ].mercury.metadata.url = url;
+                                ].mercury.metadata = v.delta.attachments[i].mercury.metadata || {}, v.delta.attachments[i].mercury.metadata.url = url;
                             return resolveAttachmentUrl(i + 1);
                         }
                     );
@@ -291,7 +304,7 @@ function parseDelta(defaultFuncs, api, ctx, globalCallback, v) {
 
                     var mentions = {};
 
-                    for (var i = 0; i < m_id.length; i++) mentions[m_id[i]] = (delta.deltaMessageReply.message.body || "").substring(m_offset[i], m_offset[i] + m_length[i]);
+                    for (var mi = 0; mi < m_id.length; mi++) mentions[m_id[mi]] = (delta.deltaMessageReply.message.body || "").substring(m_offset[mi], m_offset[mi] + m_length[mi]);
                     //Mention block - 1#
                     var callbackToReturn = {
                         type: "message_reply",
@@ -319,7 +332,7 @@ function parseDelta(defaultFuncs, api, ctx, globalCallback, v) {
                         isGroup: !!delta.deltaMessageReply.message.messageMetadata.threadKey.threadFbId,
                         mentions: mentions,
                         timestamp: delta.deltaMessageReply.message.messageMetadata.timestamp,
-                        participantIDs: (delta.deltaMessageReply.message.messageMetadata.cid.canonicalParticipantFbids || delta.deltaMessageReply.message.participants || []).map(e => e.toString())
+                        participantIDs: (delta.deltaMessageReply.message.messageMetadata.cid && delta.deltaMessageReply.message.messageMetadata.cid.canonicalParticipantFbids || delta.deltaMessageReply.message.participants || []).map(e => e.toString())
                     };
 
                     if (delta.deltaMessageReply.repliedToMessage) {
@@ -334,13 +347,13 @@ function parseDelta(defaultFuncs, api, ctx, globalCallback, v) {
 
                         var rmentions = {};
 
-                        for (var i = 0; i < m_id.length; i++) rmentions[m_id[i]] = (delta.deltaMessageReply.repliedToMessage.body || "").substring(m_offset[i], m_offset[i] + m_length[i]);
+                        for (var ri = 0; ri < m_id.length; ri++) rmentions[m_id[ri]] = (delta.deltaMessageReply.repliedToMessage.body || "").substring(m_offset[ri], m_offset[ri] + m_length[ri]);
                         //Mention block - 2#
                         callbackToReturn.messageReply = {
                             threadID: (delta.deltaMessageReply.repliedToMessage.messageMetadata.threadKey.threadFbId ? delta.deltaMessageReply.repliedToMessage.messageMetadata.threadKey.threadFbId : delta.deltaMessageReply.repliedToMessage.messageMetadata.threadKey.otherUserFbId).toString(),
                             messageID: delta.deltaMessageReply.repliedToMessage.messageMetadata.messageId,
                             senderID: delta.deltaMessageReply.repliedToMessage.messageMetadata.actorFbId.toString(),
-                            attachments: delta.deltaMessageReply.repliedToMessage.attachments.map(function (att) {
+                            attachments: (delta.deltaMessageReply.repliedToMessage.attachments || []).map(function (att) {
                                 var mercury = JSON.parse(att.mercuryJSON);
                                 Object.assign(att, mercury);
                                 return att;
@@ -382,34 +395,37 @@ function parseDelta(defaultFuncs, api, ctx, globalCallback, v) {
                             })
                             .then(utils.parseAndCheckLogin(ctx, defaultFuncs))
                             .then((resData) => {
-                                if (resData[resData.length - 1].error_results > 0) throw resData[0].o0.errors;
-                                if (resData[resData.length - 1].successful_results === 0) throw { error: "forcedFetch: there was no successful_results", res: resData };
-                                var fetchData = resData[0].o0.data.message;
-                                var mobj = {};
-                                for (var n in fetchData.message.ranges) mobj[fetchData.message.ranges[n].entity.id] = (fetchData.message.text || "").substr(fetchData.message.ranges[n].offset, fetchData.message.ranges[n].length);
-
-                                callbackToReturn.messageReply = {
-                                    threadID: callbackToReturn.threadID,
-                                    messageID: fetchData.message_id,
-                                    senderID: fetchData.message_sender.id.toString(),
-                                    attachments: fetchData.message.blob_attachment.map(att => {
-                                        var x;
-                                        try {
-                                            x = utils._formatAttachment({ blob_attachment: att });
-                                        }
-                                        catch (ex) {
-                                            x = att;
-                                            x.error = ex;
-                                            x.type = "unknown";
-                                        }
-                                        return x;
-                                    }),
-                                    args: (fetchData.message.text || "").trim().split(/\s+/) || [],
-                                    body: fetchData.message.text || "",
-                                    isGroup: callbackToReturn.isGroup,
-                                    mentions: mobj,
-                                    timestamp: parseInt(fetchData.timestamp_precise)
-                                };
+                                try {
+                                    if (resData[resData.length - 1].error_results > 0) throw resData[0].o0.errors;
+                                    if (resData[resData.length - 1].successful_results === 0) throw { error: "forcedFetch: there was no successful_results", res: resData };
+                                    var fetchData = resData[0].o0.data.message;
+                                    var mobj = {};
+                                    for (var n in fetchData.message.ranges) mobj[fetchData.message.ranges[n].entity.id] = (fetchData.message.text || "").substr(fetchData.message.ranges[n].offset, fetchData.message.ranges[n].length);
+                                    callbackToReturn.messageReply = {
+                                        threadID: callbackToReturn.threadID,
+                                        messageID: fetchData.message_id,
+                                        senderID: fetchData.message_sender.id.toString(),
+                                        attachments: (fetchData.message.blob_attachment || []).map(att => {
+                                            var x;
+                                            try {
+                                                x = utils._formatAttachment({ blob_attachment: att });
+                                            }
+                                            catch (ex) {
+                                                x = att;
+                                                x.error = ex;
+                                                x.type = "unknown";
+                                            }
+                                            return x;
+                                        }),
+                                        args: (fetchData.message.text || "").trim().split(/\s+/) || [],
+                                        body: fetchData.message.text || "",
+                                        isGroup: callbackToReturn.isGroup,
+                                        mentions: mobj,
+                                        timestamp: parseInt(fetchData.timestamp_precise)
+                                    };
+                                } catch (err) {
+                                    log.error("forcedFetch", err);
+                                }
                             })
                             .catch(err => log.error("forcedFetch", err))
                             .finally(function () {
@@ -505,95 +521,99 @@ function parseDelta(defaultFuncs, api, ctx, globalCallback, v) {
                     .post("https://www.facebook.com/api/graphqlbatch/", ctx.jar, form)
                     .then(utils.parseAndCheckLogin(ctx, defaultFuncs))
                     .then((resData) => {
-                        if (resData[resData.length - 1].error_results > 0) throw resData[0].o0.errors;
+                        try {
+                            if (resData[resData.length - 1].error_results > 0) throw resData[0].o0.errors;
 
-                        if (resData[resData.length - 1].successful_results === 0) throw { error: "forcedFetch: there was no successful_results", res: resData };
+                            if (resData[resData.length - 1].successful_results === 0) throw { error: "forcedFetch: there was no successful_results", res: resData };
 
-                        var fetchData = resData[0].o0.data.message;
+                            var fetchData = resData[0].o0.data.message;
 
-                        if (utils.getType(fetchData) == "Object") {
-                            log.info("forcedFetch", fetchData);
-                            switch (fetchData.__typename) {
-                                case "ThreadImageMessage":
-                                    (!ctx.globalOptions.selfListen && fetchData.message_sender.id.toString() === ctx.userID) ||
-                                        !ctx.loggedIn ? undefined : (function () {
-                                            globalCallback(null, {
-                                                type: "change_thread_image",
-                                                threadID: utils.formatID(tid.toString()),
-                                                snippet: fetchData.snippet,
-                                                timestamp: fetchData.timestamp_precise,
-                                                author: fetchData.message_sender.id,
-                                                image: {
-                                                    attachmentID: fetchData.image_with_metadata && fetchData.image_with_metadata.legacy_attachment_id,
-                                                    width: fetchData.image_with_metadata && fetchData.image_with_metadata.original_dimensions.x,
-                                                    height: fetchData.image_with_metadata && fetchData.image_with_metadata.original_dimensions.y,
-                                                    url: fetchData.image_with_metadata && fetchData.image_with_metadata.preview.uri
-                                                }
-                                            });
-                                        })();
-                                    break;
-                                case "UserMessage":
-                                    log.info("ff-Return", {
-                                        type: "message",
-                                        senderID: utils.formatID(fetchData.message_sender.id),
-                                        body: fetchData.message.text || "",
-                                        threadID: utils.formatID(tid.toString()),
-                                        messageID: fetchData.message_id,
-                                        attachments: [{
-                                            type: "share",
-                                            ID: fetchData.extensible_attachment.legacy_attachment_id,
-                                            url: fetchData.extensible_attachment.story_attachment.url,
+                            if (utils.getType(fetchData) == "Object") {
+                                log.info("forcedFetch", fetchData);
+                                switch (fetchData.__typename) {
+                                    case "ThreadImageMessage":
+                                        (!ctx.globalOptions.selfListen && fetchData.message_sender.id.toString() === ctx.userID) ||
+                                            !ctx.loggedIn ? undefined : (function () {
+                                                globalCallback(null, {
+                                                    type: "change_thread_image",
+                                                    threadID: utils.formatID(tid.toString()),
+                                                    snippet: fetchData.snippet,
+                                                    timestamp: fetchData.timestamp_precise,
+                                                    author: fetchData.message_sender.id,
+                                                    image: {
+                                                        attachmentID: fetchData.image_with_metadata && fetchData.image_with_metadata.legacy_attachment_id,
+                                                        width: fetchData.image_with_metadata && fetchData.image_with_metadata.original_dimensions.x,
+                                                        height: fetchData.image_with_metadata && fetchData.image_with_metadata.original_dimensions.y,
+                                                        url: fetchData.image_with_metadata && fetchData.image_with_metadata.preview.uri
+                                                    }
+                                                });
+                                            })();
+                                        break;
+                                    case "UserMessage":
+                                        log.info("ff-Return", {
+                                            type: "message",
+                                            senderID: utils.formatID(fetchData.message_sender.id),
+                                            body: fetchData.message.text || "",
+                                            threadID: utils.formatID(tid.toString()),
+                                            messageID: fetchData.message_id,
+                                            attachments: [((fetchData.extensible_attachment || {}).story_attachment) ? {
+                                                type: "share",
+                                                ID: fetchData.extensible_attachment.legacy_attachment_id,
+                                                url: fetchData.extensible_attachment.story_attachment.url,
 
-                                            title: fetchData.extensible_attachment.story_attachment.title_with_entities.text,
-                                            description: fetchData.extensible_attachment.story_attachment.description.text,
-                                            source: fetchData.extensible_attachment.story_attachment.source,
+                                                title: fetchData.extensible_attachment.story_attachment.title_with_entities && fetchData.extensible_attachment.story_attachment.title_with_entities.text,
+                                                description: fetchData.extensible_attachment.story_attachment.description && fetchData.extensible_attachment.story_attachment.description.text,
+                                                source: fetchData.extensible_attachment.story_attachment.source,
 
-                                            image: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).uri,
-                                            width: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).width,
-                                            height: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).height,
-                                            playable: (fetchData.extensible_attachment.story_attachment.media || {}).is_playable || false,
-                                            duration: (fetchData.extensible_attachment.story_attachment.media || {}).playable_duration_in_ms || 0,
+                                                image: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).uri,
+                                                width: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).width,
+                                                height: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).height,
+                                                playable: (fetchData.extensible_attachment.story_attachment.media || {}).is_playable || false,
+                                                duration: (fetchData.extensible_attachment.story_attachment.media || {}).playable_duration_in_ms || 0,
 
-                                            subattachments: fetchData.extensible_attachment.subattachments,
-                                            properties: fetchData.extensible_attachment.story_attachment.properties,
-                                        }],
-                                        mentions: {},
-                                        timestamp: parseInt(fetchData.timestamp_precise),
-                                        participantIDs: (fetchData.participants || (fetchData.messageMetadata ? fetchData.messageMetadata.cid ? fetchData.messageMetadata.cid.canonicalParticipantFbids : fetchData.messageMetadata.participantIds : []) || []),
-                                        isGroup: (fetchData.message_sender.id != tid.toString())
-                                    });
-                                    globalCallback(null, {
-                                        type: "message",
-                                        senderID: utils.formatID(fetchData.message_sender.id),
-                                        body: fetchData.message.text || "",
-                                        threadID: utils.formatID(tid.toString()),
-                                        messageID: fetchData.message_id,
-                                        attachments: [{
-                                            type: "share",
-                                            ID: fetchData.extensible_attachment.legacy_attachment_id,
-                                            url: fetchData.extensible_attachment.story_attachment.url,
+                                                subattachments: fetchData.extensible_attachment.subattachments,
+                                                properties: fetchData.extensible_attachment.story_attachment.properties,
+                                            } : null],
+                                            mentions: {},
+                                            timestamp: parseInt(fetchData.timestamp_precise),
+                                            participantIDs: (fetchData.participants || (fetchData.messageMetadata && fetchData.messageMetadata.cid && fetchData.messageMetadata.cid.canonicalParticipantFbids) || []).map(e => e.toString()),
+                                            isGroup: (fetchData.message_sender.id != tid.toString())
+                                        });
+                                        globalCallback(null, {
+                                            type: "message",
+                                            senderID: utils.formatID(fetchData.message_sender.id),
+                                            body: fetchData.message.text || "",
+                                            threadID: utils.formatID(tid.toString()),
+                                            messageID: fetchData.message_id,
+                                            attachments: [((fetchData.extensible_attachment || {}).story_attachment) ? {
+                                                type: "share",
+                                                ID: fetchData.extensible_attachment.legacy_attachment_id,
+                                                url: fetchData.extensible_attachment.story_attachment.url,
 
-                                            title: fetchData.extensible_attachment.story_attachment.title_with_entities.text,
-                                            description: fetchData.extensible_attachment.story_attachment.description.text,
-                                            source: fetchData.extensible_attachment.story_attachment.source,
+                                                title: fetchData.extensible_attachment.story_attachment.title_with_entities && fetchData.extensible_attachment.story_attachment.title_with_entities.text,
+                                                description: fetchData.extensible_attachment.story_attachment.description && fetchData.extensible_attachment.story_attachment.description.text,
+                                                source: fetchData.extensible_attachment.story_attachment.source,
 
-                                            image: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).uri,
-                                            width: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).width,
-                                            height: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).height,
-                                            playable: (fetchData.extensible_attachment.story_attachment.media || {}).is_playable || false,
-                                            duration: (fetchData.extensible_attachment.story_attachment.media || {}).playable_duration_in_ms || 0,
+                                                image: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).uri,
+                                                width: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).width,
+                                                height: ((fetchData.extensible_attachment.story_attachment.media || {}).image || {}).height,
+                                                playable: (fetchData.extensible_attachment.story_attachment.media || {}).is_playable || false,
+                                                duration: (fetchData.extensible_attachment.story_attachment.media || {}).playable_duration_in_ms || 0,
 
-                                            subattachments: fetchData.extensible_attachment.subattachments,
-                                            properties: fetchData.extensible_attachment.story_attachment.properties,
-                                        }],
-                                        mentions: {},
-                                        timestamp: parseInt(fetchData.timestamp_precise),
-                                        participantIDs: (fetchData.participants || (fetchData.messageMetadata ? fetchData.messageMetadata.cid ? fetchData.messageMetadata.cid.canonicalParticipantFbids : fetchData.messageMetadata.participantIds : []) || []),
-                                        isGroup: (fetchData.message_sender.id != tid.toString())
-                                    });
+                                                subattachments: fetchData.extensible_attachment.subattachments,
+                                                properties: fetchData.extensible_attachment.story_attachment.properties,
+                                            } : null],
+                                            mentions: {},
+                                            timestamp: parseInt(fetchData.timestamp_precise),
+                                            participantIDs: (fetchData.participants || (fetchData.messageMetadata && fetchData.messageMetadata.cid && fetchData.messageMetadata.cid.canonicalParticipantFbids) || []).map(e => e.toString()),
+                                            isGroup: (fetchData.message_sender.id != tid.toString())
+                                        });
+                                }
                             }
+                            else log.error("forcedFetch", fetchData);
+                        } catch (err) {
+                            log.error("forcedFetch", err);
                         }
-                        else log.error("forcedFetch", fetchData);
                     })
                     .catch((err) => log.error("forcedFetch", err));
             }
@@ -634,109 +654,6 @@ function markDelivery(ctx, api, threadID, messageID) {
 
 module.exports = function (defaultFuncs, api, ctx) {
     let globalCallback = identity;
-    // function getSeqID() {
-    // ctx.t_mqttCalled = false;
-    // async function attemptRequest(retries = 3) {
-    //   try {
-    //     if (!ctx.fb_dtsg) {
-    //       const dtsg = await api.getFreshDtsg();
-    //       if (!dtsg) {
-    //         if (retries > 0) {
-    //           logger.Warning("Failed to get fb_dtsg, retrying...");
-    //                     await utils.sleep(2000); // Longer delay for token retry
-    //                     return attemptRequest(retries - 1);
-    //                   }
-    //                   throw { error: "Could not obtain fb_dtsg after multiple attempts" };
-    //                 }
-    //                 ctx.fb_dtsg = dtsg;
-    //               }
-
-    //               const form = {
-    //                 av: ctx.userID,
-    //                 fb_dtsg: ctx.fb_dtsg,
-    //                 queries: JSON.stringify({
-    //                   o0: {
-    //                     doc_id: '3336396659757871',
-    //                     query_params: {
-    //                       limit: 1,
-    //                       before: null,
-    //                       tags: ['INBOX'],
-    //                       includeDeliveryReceipts: false,
-    //                       includeSeqID: true
-    //                     }
-    //                   }
-    //                 }),
-    //                 __user: ctx.userID,
-    //                 __a: '1',
-    //                 __req: '8',
-    //                 __hs: '19577.HYP:comet_pkg.2.1..2.1',
-    //                 dpr: '1',
-    //                 fb_api_caller_class: 'RelayModern',
-    //                 fb_api_req_friendly_name: 'MessengerGraphQLThreadlistFetcher'
-    //               };
-
-    //               const headers = {
-    //                 'Content-Type': 'application/x-www-form-urlencoded',
-    //                 'Referer': 'https://www.facebook.com/',
-    //                 'Origin': 'https://www.facebook.com',
-    //                 'sec-fetch-site': 'same-origin',
-    //                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-    //                 'Cookie': ctx.jar.getCookieString('https://www.facebook.com'),
-    //                 'accept': '*/*',
-    //                 'accept-encoding': 'gzip, deflate, br'
-    //               };
-
-    //               const resData = await defaultFuncs
-    //               .post("https://www.facebook.com/api/graphqlbatch/", ctx.jar, form, { headers })
-    //               .then(utils.parseAndCheckLogin(ctx, defaultFuncs));
-
-    //               if (debugSeq) {
-    //                 console.log('GraphQL SeqID Response:', JSON.stringify(resData, null, 2));
-    //               }
-
-    //               if (resData.error === 1357004 || resData.error === 1357001) {
-    //                 if (retries > 0) {
-    //                   logger.Warning("Session error, refreshing token and retrying...");
-    //                 ctx.fb_dtsg = null; // Force new token
-    //                 await utils.sleep(2000);
-    //                 return attemptRequest(retries - 1);
-    //               }
-    //               throw { error: "Session refresh failed after retries" };
-    //             }
-
-    //             if (!Array.isArray(resData)) {
-    //               throw { error: "Invalid response format", res: resData };
-    //             }
-
-    //             const seqID = resData[0]?.o0?.data?.viewer?.message_threads?.sync_sequence_id;
-    //             if (!seqID) {
-    //               throw { error: "Missing sync_sequence_id", res: resData };
-    //             }
-
-    //             ctx.lastSeqId = seqID;
-    //             if (debugSeq) {
-    //               console.log('Got SeqID:', ctx.lastSeqId);
-    //             }
-
-    //             return listenMqtt(defaultFuncs, api, ctx, globalCallback);
-
-    //           } catch (err) {
-    //             if (retries > 0) {
-    //               console.log("Request failed, retrying...");
-
-    //               return attemptRequest(retries - 1);
-    //             }
-    //             throw err;
-    //           }
-    //         }
-
-    //         return attemptRequest()
-    // 		.catch((err) => {
-    // 			log.error("getSeqId", err);
-    // 			if (utils.getType(err) == "Object" && err.error === "Not logged in") ctx.loggedIn = false;
-    // 			return globalCallback(err);
-    // 		});
-    //       }
 
     getSeqID = function getSeqID() {
         ctx.t_mqttCalled = false;
@@ -766,14 +683,21 @@ module.exports = function (defaultFuncs, api, ctx) {
                 callback = callback || (() => { });
                 globalCallback = identity;
                 if (ctx.mqttClient) {
-                    ctx.mqttClient.unsubscribe("/webrtc");
-                    ctx.mqttClient.unsubscribe("/rtc_multi");
-                    ctx.mqttClient.unsubscribe("/onevc");
-                    ctx.mqttClient.publish("/browser_close", "{}");
-                    ctx.mqttClient.end(false, function (...data) {
-                        callback(data);
+                    try {
+                        ctx.mqttClient.unsubscribe("/webrtc");
+                        ctx.mqttClient.unsubscribe("/rtc_multi");
+                        ctx.mqttClient.unsubscribe("/onevc");
+                        ctx.mqttClient.publish("/browser_close", "{}");
+                        ctx.mqttClient.end(false, function (...data) {
+                            callback(data);
+                            ctx.mqttClient = undefined;
+                        });
+                    } catch (e) {
+                        callback(e);
                         ctx.mqttClient = undefined;
-                    });
+                    }
+                } else {
+                    callback();
                 }
             }
 
@@ -815,7 +739,7 @@ module.exports = function (defaultFuncs, api, ctx) {
         };
 
         if (!ctx.firstListen || !ctx.lastSeqId) {
-            getSeqID(defaultFuncs, api, ctx, globalCallback);
+            getSeqID();
         } else {
             listenMqtt(defaultFuncs, api, ctx, globalCallback);
         }
