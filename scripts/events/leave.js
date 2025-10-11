@@ -14,10 +14,7 @@ module.exports = {
             leaveType1Formal: "Voluntarily left",
             leaveType2Formal: "Kicked by admin {kickerTag}",
             formalLeaveMessage:
-`{userNameTag} has left the {threadName} group.
-Reason: {type}
-
-We will miss their presence 💔`,
+`💔` `{userNameTag} has left the group.,
 
             // === Funny Style ===
             leaveType1Funny: "Ran away on their own 😂",
