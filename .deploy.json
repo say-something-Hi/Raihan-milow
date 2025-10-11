@@ -2,12 +2,15 @@
   "deploy": [
     {
       "type": "cmd",
-      "cmd": "npm install && npm run build"
+      "cmd": "cd /home/mykitche/Bdraihanily/Raihan_premium- && npm install"
     },
     {
-      "type": "copy",
-      "source": "dist",
-      "destination": "/home/mykitche/public_html"
+      "type": "cmd",
+      "cmd": "pm2 stop goatbot || true"
+    },
+    {
+      "type": "cmd",
+      "cmd": "cd /home/mykitche/Bdraihanily/Raihan_premium- && pm2 start index.js --name goatbot --time"
     }
   ]
 }
