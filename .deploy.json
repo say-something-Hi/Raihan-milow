@@ -1,14 +1,13 @@
-[
+{
+  "deploy": [
     {
-        "task": "command",
-        "command": "cd /home/mykitche/git/Raihan_premium- && git pull"
+      "type": "cmd",
+      "cmd": "npm install && npm run build"
     },
     {
-        "task": "command",
-        "command": "cd /home/mykitche/git/Raihan_premium- && npm install --production"
-    },
-    {
-        "task": "command",
-        "command": "cd /home/mykitche/git/Raihan_premium- && pm2 restart Raihan-Bot || pm2 start index.js --name Raihan-Bot --interpreter node && pm2 save"
+      "type": "copy",
+      "source": "dist",
+      "destination": "/home/mykitche/public_html"
     }
-]
+  ]
+}
