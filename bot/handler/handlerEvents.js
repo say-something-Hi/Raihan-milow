@@ -63,9 +63,17 @@ function getRoleConfig(utils, command, isGroup, threadData, commandName) {
 
 // ✅ REFACTORED HELPER FUNCTION TO AVOID DUPLICATION
 async function checkGroupAuthorization(isGroup, config, senderID, commandName, threadData, message) {
-	if (isGroup && !config.adminBot.includes(senderID)) {
-		if (commandName !== "approve" && threadData.data.groupApproved !== true) {
-			await message.reply("⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval. \n  \n  or Join BOT support group to place your approval  \n  https://m.me/j/AbZmEwsQE6rgqPQy/ ");
+	// Safeguards for missing config properties
+	const adminBot = config?.adminBot || [];
+	if (isGroup && !adminBot.includes(senderID)) {
+		// allow the special "approve" command to pass through to let admins approve groups
+		if (commandName !== "approve" && threadData?.data?.groupApproved !== true) {
+			// Use a support URL from config if provided, otherwise a placeholder text
+			const supportUrl = config?.supportGroup || "https://m.me/your-bot-support";
+			await message.reply(
+				"⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval.\n\n" +
+				`Or join the bot support group to request approval:\n${supportUrl}`
+			);
 			return true; // Indicates check failed, execution should stop
 		}
 	}
@@ -73,25 +81,25 @@ async function checkGroupAuthorization(isGroup, config, senderID, commandName, t
 }
 
 function isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, commandName, message, lang) {
-	const config = global.GoatBot.config;
+	const config = global.GoatBot.config || {};
 	const { adminBot, hideNotiMessage } = config;
 
 	// check if user banned
 	const infoBannedUser = userData.banned;
 	if (infoBannedUser.status == true) {
 		const { reason, date } = infoBannedUser;
-		if (hideNotiMessage.userBanned == false)
+		if (hideNotiMessage?.userBanned == false)
 			message.reply(getText("userBanned", reason, date, senderID, lang));
 		return true;
 	}
 
 	// check if only admin bot
 	if (
-		config.adminOnly.enable == true
-		&& !adminBot.includes(senderID)
-		&& !config.adminOnly.ignoreCommand.includes(commandName)
+		config.adminOnly?.enable == true
+		&& !(adminBot || []).includes(senderID)
+		&& !(config.adminOnly?.ignoreCommand || []).includes(commandName)
 	) {
-		if (hideNotiMessage.adminOnly == false)
+		if (hideNotiMessage?.adminOnly == false)
 			message.reply(getText("onlyAdminBot", null, null, null, lang));
 		return true;
 	}
@@ -113,7 +121,7 @@ function isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, 
 		const infoBannedThread = threadData.banned;
 		if (infoBannedThread.status == true) {
 			const { reason, date } = infoBannedThread;
-			if (hideNotiMessage.threadBanned == false)
+			if (hideNotiMessage?.threadBanned == false)
 				message.reply(getText("threadBanned", reason, date, threadID, lang));
 			return true;
 		}
@@ -147,7 +155,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		const { utils, client, GoatBot } = global;
 		const { getPrefix, removeHomeDir, log, getTime } = utils;
 		const { config, configCommands: { envGlobal, envCommands, envEvents } } = GoatBot;
-		const { autoRefreshThreadInfoFirstTime } = config.database;
+		const { autoRefreshThreadInfoFirstTime } = config.database || {};
 		let { hideNotiMessage = {} } = config;
 
 		const { body, messageID, threadID, isGroup } = event;
@@ -379,7 +387,8 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			}
 			catch (err) {
 				log.err("CALL COMMAND", `An error occurred when calling the command ${commandName}`, err);
-				return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
+				const errStr = err && (err.stack ? removeHomeDir(err.stack.split("\n").slice(0, 5).join("\n")) : JSON.stringify(err, null, 2));
+				return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred", time, commandName, errStr));
 			}
 		}
 
@@ -430,7 +439,8 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 								log.info("onChat", `${commandName} | ${userData.name} | ${senderID} | ${threadID} | ${args.join(" ")}`);
 							}
 							catch (err) {
-								await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred2", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
+								const errStr = err && (err.stack ? removeHomeDir(err.stack.split("\n").slice(0, 5).join("\n")) : JSON.stringify(err, null, 2));
+								await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred2", time, commandName, errStr));
 							}
 						}
 					})
@@ -484,7 +494,8 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 								log.info("onAnyEvent", `${commandName} | ${senderID} | ${userData.name} | ${threadID}`);
 							}
 							catch (err) {
-								message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred7", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
+								const errStr = err && (err.stack ? removeHomeDir(err.stack.split("\n").slice(0, 5).join("\n")) : JSON.stringify(err, null, 2));
+								message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred7", time, commandName, errStr));
 								log.err("onAnyEvent", `An error occurred when calling the command onAnyEvent ${commandName}`, err);
 							}
 						}
@@ -497,7 +508,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 
 		/*
 		 +------------------------------------------------+
-		 |                  ON FIRST CHAT                 |
+		 |                   ON FIRST CHAT                 |
 		 +------------------------------------------------+
 		*/
 		async function onFirstChat() {
@@ -540,7 +551,8 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 								log.info("onFirstChat", `${commandName} | ${userData.name} | ${senderID} | ${threadID} | ${args.join(" ")}`);
 							}
 							catch (err) {
-								await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred2", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
+								const errStr = err && (err.stack ? removeHomeDir(err.stack.split("\n").slice(0, 5).join("\n")) : JSON.stringify(err, null, 2));
+								await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred2", time, commandName, errStr));
 							}
 						}
 					})
@@ -612,7 +624,8 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			}
 			catch (err) {
 				log.err("onReply", `An error occurred when calling the command onReply ${commandName}`, err);
-				await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred3", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
+				const errStr = err && (err.stack ? removeHomeDir(err.stack.split("\n").slice(0, 5).join("\n")) : JSON.stringify(err, null, 2));
+				await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred3", time, commandName, errStr));
 			}
 		}
 
@@ -688,7 +701,8 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			}
 			catch (err) {
 				log.err("onReaction", `An error occurred when calling the command onReaction ${commandName}`, err);
-				await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred4", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
+				const errStr = err && (err.stack ? removeHomeDir(err.stack.split("\n").slice(0, 5).join("\n")) : JSON.stringify(err, null, 2));
+				await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred4", time, commandName, errStr));
 			}
 		}
 
@@ -700,12 +714,23 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		*/
 		async function handlerEvent() {
 			const { author } = event;
-			const allEventCommand = GoatBot.eventCommands.entries();
-			for (const [key] of allEventCommand) {
-				const getEvent = GoatBot.eventCommands.get(key);
+			// Ensure eventCommands is iterable (Map or Object)
+			const entries = GoatBot.eventCommands && typeof GoatBot.eventCommands.entries === 'function'
+				? GoatBot.eventCommands.entries()
+				: [];
+
+			for (const pair of entries) {
+				// pair might be [key, value] if entries() used
+				const key = Array.isArray(pair) ? pair[0] : pair;
+				const getEvent = GoatBot.eventCommands.get ? GoatBot.eventCommands.get(key) : (Array.isArray(pair) ? pair[1] : undefined);
 				if (!getEvent)
 					continue;
-				const commandName = getEvent.config.name;
+
+				const commandName = getEvent.config?.name || key;
+				// skip if there's no onStart function
+				if (typeof getEvent.onStart !== 'function')
+					continue;
+
 				const getText2 = createGetText2(langCode, `${process.cwd()}/languages/events/${langCode}.js`, prefix, getEvent);
 				const time = getTime("DD/MM/YYYY HH:mm:ss");
 				try {
@@ -721,7 +746,12 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 				}
 				catch (err) {
 					log.err("EVENT COMMAND", `An error occurred when calling the command event ${commandName}`, err);
-					await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred5", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
+					const errStr = err && (err.stack ? removeHomeDir(err.stack.split("\n").slice(0, 5).join("\n")) : JSON.stringify(err, null, 2));
+					try {
+						await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred5", time, commandName, errStr));
+					} catch (sendErr) {
+						log.err("EVENT COMMAND", `Failed to send errorOccurred5 reply for ${commandName}`, sendErr);
+					}
 				}
 			}
 		}
@@ -768,7 +798,8 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 								log.info("onEvent", `${commandName} | ${author} | ${userData.name} | ${threadID}`);
 							}
 							catch (err) {
-								message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred6", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
+								const errStr = err && (err.stack ? removeHomeDir(err.stack.split("\n").slice(0, 5).join("\n")) : JSON.stringify(err, null, 2));
+								message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred6", time, commandName, errStr));
 								log.err("onEvent", `An error occurred when calling the command onEvent ${commandName}`, err);
 							}
 						}
@@ -785,7 +816,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		 +------------------------------------------------+
 		*/
 		async function presence() {
-			// Your code here
+			// keep for future presence handling
 		}
 
 		/*
@@ -794,7 +825,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		 +------------------------------------------------+
 		*/
 		async function read_receipt() {
-			// Your code here
+			// keep for future read receipt handling
 		}
 
 		/*
@@ -803,7 +834,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		 +------------------------------------------------+
 		*/
 		async function typ() {
-			// Your code here
+			// keep for future typing events handling
 		}
 
 		return {
