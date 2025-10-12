@@ -1,7 +1,5 @@
 const fs = require("fs-extra");
 const nullAndUndefined = [undefined, null];
-// const { config } = global.GoatBot;
-// const { utils } = global;
 
 function getType(obj) {
 	return Object.prototype.toString.call(obj).slice(8, -1);
@@ -61,12 +59,6 @@ function getRoleConfig(utils, command, isGroup, threadData, commandName) {
 	}
 
 	return roleConfig;
-	// {
-	// 	onChat,
-	// 	onStart,
-	// 	onReaction,
-	// 	onReply
-	// }
 }
 
 function isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, commandName, message, lang) {
@@ -118,7 +110,6 @@ function isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, 
 	return false;
 }
 
-
 function createGetText2(langCode, pathCustomLang, prefix, command) {
 	const commandType = command.config.countDown ? "command" : "command event";
 	const commandName = command.config.name;
@@ -137,6 +128,76 @@ function createGetText2(langCode, pathCustomLang, prefix, command) {
 	}
 	return getText2;
 }
+
+// Levenshtein distance function for string similarity
+function levenshteinDistance(str1, str2) {
+	const matrix = [];
+	for (let i = 0; i <= str2.length; i++) {
+		matrix[i] = [i];
+	}
+	for (let j = 0; j <= str1.length; j++) {
+		matrix[0][j] = j;
+	}
+	for (let i = 1; i <= str2.length; i++) {
+		for (let j = 1; j <= str1.length; j++) {
+			if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+				matrix[i][j] = matrix[i - 1][j - 1];
+			} else {
+				matrix[i][j] = Math.min(
+					matrix[i - 1][j - 1] + 1,
+					matrix[i][j - 1] + 1,
+					matrix[i - 1][j] + 1
+				);
+			}
+		}
+	}
+	return matrix[str2.length][str1.length];
+}
+
+// Find best matching command
+function findBestMatch(inputCommand, allCommands) {
+	let bestMatch = null;
+	let bestDistance = Infinity;
+	const maxDistance = Math.ceil(inputCommand.length * 0.6); // Allow up to 60% character difference
+
+	for (const availableCommand of allCommands) {
+		const distance = levenshteinDistance(inputCommand.toLowerCase(), availableCommand.toLowerCase());
+		if (distance < bestDistance && distance <= maxDistance) {
+			bestDistance = distance;
+			bestMatch = availableCommand;
+		}
+	}
+
+	return { bestMatch, bestDistance };
+}
+
+// Random command suggestions with better text
+const wrongCommandSuggestions = [
+	`Command not found. Did you mean: {prefix}{bestMatch}?`,
+	`Unknown command. Try: {prefix}{bestMatch}`,
+	`That command doesn't exist. Maybe you meant: {prefix}{bestMatch}`,
+	`I don't recognize that command. Did you mean {prefix}{bestMatch}?`,
+	`No such command. Similar command: {prefix}{bestMatch}`,
+	`Command not available. Try: {prefix}{bestMatch}`,
+	`Invalid command. Did you mean {prefix}{bestMatch}?`,
+	`That command isn't in my list. Maybe {prefix}{bestMatch}?`,
+	`Unknown command. The closest match is: {prefix}{bestMatch}`,
+	`Command not found. Similar: {prefix}{bestMatch}`,
+	`❌ Command "{commandName}" not found. Did you mean: {prefix}{bestMatch}?`,
+	`🤔 Unknown command "{commandName}". Try: {prefix}{bestMatch}`,
+	`⚠️ Invalid command. Similar: {prefix}{bestMatch}`
+];
+
+// Prefix only responses
+const prefixOnlyResponses = [
+	"That's just my prefix. Try /help to see all available commands",
+	"Try a command like /help",
+	"Looking for something? Try /gpt",
+	"Need help? Use /help for commands!",
+	"This is my prefix only, try /hgen",
+	"Just the prefix won't do! Try /help",
+	"⚠️ Add a command after the prefix!"
+];
 
 module.exports = function (api, threadModel, userModel, dashBoardModel, globalModel, usersData, threadsData, dashBoardData, globalData) {
 	return async function (event, message) {
@@ -216,18 +277,9 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			if (!body || !body.startsWith(prefix))
 				return;
 
-			// ✅ Feature 2: Prefix Only Text Response
+			// ✅ Feature 1: Prefix Only Text Response
 			// Check if message is just the prefix with no command
 			if (body.trim() === prefix.trim()) {
-				const prefixOnlyResponses = [
-					"That's just my prefix. Try /help to see all available commands",
-					"Try a command like /help",
-					"Looking for something? Try /gpt",
-					"Need help? Use /help for commands!",
-					"This is my prefix only, try /hgen",
-					"Just the prefix won't do! Try /help",
-					"⚠️ Add a command after the prefix!"
-				];
 				const randomResponse = prefixOnlyResponses[Math.floor(Math.random() * prefixOnlyResponses.length)];
 				return await message.reply(randomResponse);
 			}
@@ -276,66 +328,30 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 					return await message.reply(unauthorizedMsg);
 				}
 			}
+
 			if (!command) {
-				// ✅ Feature 3: Wrong Command Suggestion
-				// Suggest closest matching command using simple string similarity
+				// ✅ Feature 2: Wrong Command Suggestion with Random Messages
 				if (commandName && !hideNotiMessage.commandNotFound) {
 					// Get all available command names and aliases
 					const allCommands = Array.from(GoatBot.commands.keys());
 					const allAliases = Array.from(GoatBot.aliases.keys());
 					const allAvailableCommands = [...allCommands, ...allAliases];
 
-					// Simple Levenshtein distance function
-					function levenshteinDistance(str1, str2) {
-						const matrix = [];
-						for (let i = 0; i <= str2.length; i++) {
-							matrix[i] = [i];
-						}
-						for (let j = 0; j <= str1.length; j++) {
-							matrix[0][j] = j;
-						}
-						for (let i = 1; i <= str2.length; i++) {
-							for (let j = 1; j <= str1.length; j++) {
-								if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-									matrix[i][j] = matrix[i - 1][j - 1];
-								} else {
-									matrix[i][j] = Math.min(
-										matrix[i - 1][j - 1] + 1,
-										matrix[i][j - 1] + 1,
-										matrix[i - 1][j] + 1
-									);
-								}
-							}
-						}
-						return matrix[str2.length][str1.length];
-					}
-
 					// Find the closest match
-					let bestMatch = null;
-					let bestDistance = Infinity;
-					const maxDistance = Math.ceil(commandName.length * 0.6); // Allow up to 60% character difference
+					const { bestMatch, bestDistance } = findBestMatch(commandName, allAvailableCommands);
 
-					for (const availableCommand of allAvailableCommands) {
-						const distance = levenshteinDistance(commandName.toLowerCase(), availableCommand.toLowerCase());
-						if (distance < bestDistance && distance <= maxDistance) {
-							bestDistance = distance;
-							bestMatch = availableCommand;
-						}
+					// If we found a good match, suggest it with random message
+					if (bestMatch && bestDistance <= 3) {
+						const randomSuggestion = wrongCommandSuggestions[Math.floor(Math.random() * wrongCommandSuggestions.length)];
+						const finalMessage = randomSuggestion
+							.replace(/{prefix}/g, prefix)
+							.replace(/{bestMatch}/g, bestMatch)
+							.replace(/{commandName}/g, commandName);
+						
+						return await message.reply(finalMessage);
 					}
 
-					// If we found a good match, suggest it
-					if (bestMatch && bestDistance <= 2) {
-						const suggestions = [
-							`Did you mean: ${prefix}${bestMatch}?`,
-							`Looks like a typo! Maybe you meant ${prefix}${bestMatch}?`,
-							`Command not found. Did you mean ${prefix}${bestMatch}?`,
-							`❌ Unknown command. Try ${prefix}${bestMatch} instead?`
-						];
-						const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
-						return await message.reply(randomSuggestion);
-					}
-
-					// Fall back to original error message if no good match found
+					// If no good match found, use original error message
 					return await message.reply(
 						utils.getText({ lang: langCode, head: "handlerEvents" }, "commandNotFound", commandName, prefix)
 					);
@@ -408,7 +424,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			}
 		}
 
-
 		/*
 		 +------------------------------------------------+
 		 |                    ON CHAT                     |
@@ -466,7 +481,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 					});
 			}
 		}
-
 
 		/*
 		 +------------------------------------------------+
@@ -579,7 +593,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			}
 		}
 
-
 		/* 
 		 +------------------------------------------------+
 		 |                    ON REPLY                    |
@@ -643,14 +656,13 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			}
 		}
 
-
 		/*
 		 +------------------------------------------------+
 		 |                   ON REACTION                  |
 		 +------------------------------------------------+
 		*/
 		async function onReaction() {
-			// ✅ Feature 1: Admin Reaction Unsend
+			// ✅ Feature 3: Admin Reaction Unsend
 			// Check if admin reacts with 😠 emoji to unsend message
 			if (event.reaction === "😠") {
 				// Check if user is admin (role 1 = box admin, role 2 = bot admin)
@@ -721,7 +733,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			}
 		}
 
-
 		/*
 		 +------------------------------------------------+
 		 |                 EVENT COMMAND                  |
@@ -754,7 +765,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 				}
 			}
 		}
-
 
 		/*
 		 +------------------------------------------------+
