@@ -158,7 +158,7 @@ function levenshteinDistance(str1, str2) {
 function findBestMatch(inputCommand, allCommands) {
 	let bestMatch = null;
 	let bestDistance = Infinity;
-	const maxDistance = Math.ceil(inputCommand.length * 0.6); // Allow up to 60% character difference
+	const maxDistance = Math.ceil(inputCommand.length * 0.6);
 
 	for (const availableCommand of allCommands) {
 		const distance = levenshteinDistance(inputCommand.toLowerCase(), availableCommand.toLowerCase());
@@ -171,248 +171,144 @@ function findBestMatch(inputCommand, allCommands) {
 	return { bestMatch, bestDistance };
 }
 
-// Random command suggestions with better text
-const wrongCommandSuggestions = [`💘 Oops cutie~ did you mean ${prefix}${bestMatch}?`,
-  `😉 Arre cutie~ try ${prefix}${bestMatch}?`,
-  `🥰 Aha! Could it be ${prefix}${bestMatch}?`,
-  `😎 Ooh la la! Maybe ${prefix}${bestMatch}?`,
-  `💖 Thik ache~ try ${prefix}${bestMatch}?`,
-  `😻 Purr~ did you type ${prefix}${bestMatch}?`,
-  `💞 Babe~ little typo? ${prefix}${bestMatch}?`,
-  `💫 Oopsie! Try ${prefix}${bestMatch}?`,
-  `😏 Hmm… maybe ${prefix}${bestMatch}?`,
-  `💌 Sweet typo… try ${prefix}${bestMatch}?`,
-  `🥳 Almost there! Maybe ${prefix}${bestMatch}?`,
-  `😚 Hey you… maybe ${prefix}${bestMatch}?`,
-  `💫 That sparkles! Try ${prefix}${bestMatch}?`,
-  `🫣 Hmm… looks like ${prefix}${bestMatch}?`,
-  `😻 Purr~ did you mean ${prefix}${bestMatch}?`,
-  `💘 Cutie alert! Try ${prefix}${bestMatch}?`,
-  `🥳 Fun vibes! Maybe ${prefix}${bestMatch}?`,
-  `😎 Almost right… try ${prefix}${bestMatch}?`,
-  `💫 Sparkly! Could it be ${prefix}${bestMatch}?`,
-  `🫰 Little typo? Perhaps ${prefix}${bestMatch}?`,
+// Premium wrong command suggestions
+function getWrongCommandSuggestion(prefix, bestMatch) {
+	const wrongCommandSuggestions = [
+		`💘 Oops cutie~ did you mean ${prefix}${bestMatch}?`,
+		`😉 Arre cutie~ try ${prefix}${bestMatch}?`,
+		`🥰 Aha! Could it be ${prefix}${bestMatch}?`,
+		`😎 Ooh la la! Maybe ${prefix}${bestMatch}?`,
+		`💖 Thik ache~ try ${prefix}${bestMatch}?`,
+		`😻 Purr~ did you type ${prefix}${bestMatch}?`,
+		`💞 Babe~ little typo? ${prefix}${bestMatch}?`,
+		`💫 Oopsie! Try ${prefix}${bestMatch}?`,
+		`😏 Hmm… maybe ${prefix}${bestMatch}?`,
+		`💌 Sweet typo… try ${prefix}${bestMatch}?`,
+		`🥳 Almost there! Maybe ${prefix}${bestMatch}?`,
+		`😚 Hey you… maybe ${prefix}${bestMatch}?`,
+		`💫 That sparkles! Try ${prefix}${bestMatch}?`,
+		`🫣 Hmm… looks like ${prefix}${bestMatch}?`,
+		`😻 Purr~ did you mean ${prefix}${bestMatch}?`,
+		`💘 Cutie alert! Try ${prefix}${bestMatch}?`,
+		`🥳 Fun vibes! Maybe ${prefix}${bestMatch}?`,
+		`😎 Almost right… try ${prefix}${bestMatch}?`,
+		`💫 Sparkly! Could it be ${prefix}${bestMatch}?`,
+		`🫰 Little typo? Perhaps ${prefix}${bestMatch}?`,
+		`🌸 Cherry blossom~ maybe ${prefix}${bestMatch}?`,
+		`✨ Starlight guess~ ${prefix}${bestMatch}?`,
+		`🦋 Butterfly wings~ try ${prefix}${bestMatch}?`,
+		`🍯 Honey sweet~ did you mean ${prefix}${bestMatch}?`,
+		`🎀 Ribbon tied~ perhaps ${prefix}${bestMatch}?`,
+		`🐾 Paw prints lead to ${prefix}${bestMatch}?`,
+		`🌈 After rain~ maybe ${prefix}${bestMatch}?`,
+		`🦄 Magic says~ ${prefix}${bestMatch}?`,
+		`🍩 Donut worry~ try ${prefix}${bestMatch}?`,
+		`🎵 Melody suggests ${prefix}${bestMatch}?`,
+		`💕 Sweetheart~ typo? ${prefix}${bestMatch}?`,
+		`🌟 Shining star~ maybe ${prefix}${bestMatch}?`,
+		`🐣 Peep peep~ try ${prefix}${bestMatch}?`,
+		`🎉 Party time! ${prefix}${bestMatch}?`,
+		`🛸 UFO sighting~ ${prefix}${bestMatch}?`,
+		`🧸 Teddy bear hug~ ${prefix}${bestMatch}?`,
+		`🍦 Ice cream dream~ ${prefix}${bestMatch}?`,
+		`🎈 Balloon floats to ${prefix}${bestMatch}?`,
+		`🦁 Roar-some! Try ${prefix}${bestMatch}?`,
+		`🏮 Lantern light~ ${prefix}${bestMatch}?`,
+		`💝 Gift for you~ ${prefix}${bestMatch}?`,
+		`🦊 Foxy guess~ ${prefix}${bestMatch}?`,
+		`🍄 Mushroom circle~ ${prefix}${bestMatch}?`,
+		`🎸 Rock on! Try ${prefix}${bestMatch}?`,
+		`🦉 Wise owl says ${prefix}${bestMatch}?`,
+		`🍉 Watermelon sugar~ ${prefix}${bestMatch}?`,
+		`🎯 Bullseye! Maybe ${prefix}${bestMatch}?`,
+		`🦋 Flutter by~ ${prefix}${bestMatch}?`,
+		`🧁 Cupcake sweet~ ${prefix}${bestMatch}?`,
+		`⚡ Lightning strike~ ${prefix}${bestMatch}?`
+	];
+	return wrongCommandSuggestions[Math.floor(Math.random() * wrongCommandSuggestions.length)];
+}
 
-  `🌸 Cherry blossom~ maybe ${prefix}${bestMatch}?`,
-  `✨ Starlight guess~ ${prefix}${bestMatch}?`,
-  `🦋 Butterfly wings~ try ${prefix}${bestMatch}?`,
-  `🍯 Honey sweet~ did you mean ${prefix}${bestMatch}?`,
-  `🎀 Ribbon tied~ perhaps ${prefix}${bestMatch}?`,
-  `🐾 Paw prints lead to ${prefix}${bestMatch}?`,
-  `🌈 After rain~ maybe ${prefix}${bestMatch}?`,
-  `🦄 Magic says~ ${prefix}${bestMatch}?`,
-  `🍩 Donut worry~ try ${prefix}${bestMatch}?`,
-  `🎵 Melody suggests ${prefix}${bestMatch}?`,
-
-  `💕 Sweetheart~ typo? ${prefix}${bestMatch}?`,
-  `🌟 Shining star~ maybe ${prefix}${bestMatch}?`,
-  `🐣 Peep peep~ try ${prefix}${bestMatch}?`,
-  `🎉 Party time! ${prefix}${bestMatch}?`,
-  `🛸 UFO sighting~ ${prefix}${bestMatch}?`,
-  `🧸 Teddy bear hug~ ${prefix}${bestMatch}?`,
-  `🍦 Ice cream dream~ ${prefix}${bestMatch}?`,
-  `🎈 Balloon floats to ${prefix}${bestMatch}?`,
-  `🦁 Roar-some! Try ${prefix}${bestMatch}?`,
-  `🏮 Lantern light~ ${prefix}${bestMatch}?`,
-
-  `💝 Gift for you~ ${prefix}${bestMatch}?`,
-  `🦊 Foxy guess~ ${prefix}${bestMatch}?`,
-  `🍄 Mushroom circle~ ${prefix}${bestMatch}?`,
-  `🎸 Rock on! Try ${prefix}${bestMatch}?`,
-  `🦉 Wise owl says ${prefix}${bestMatch}?`,
-  `🍉 Watermelon sugar~ ${prefix}${bestMatch}?`,
-  `🎯 Bullseye! Maybe ${prefix}${bestMatch}?`,
-  `🦋 Flutter by~ ${prefix}${bestMatch}?`,
-  `🧁 Cupcake sweet~ ${prefix}${bestMatch}?`,
-  `⚡ Lightning strike~ ${prefix}${bestMatch}?`,
-
-  `💗 Heartbeat~ ${prefix}${bestMatch}?`,
-  `🐰 Bunny hop~ ${prefix}${bestMatch}?`,
-  `🌺 Hibiscus bloom~ ${prefix}${bestMatch}?`,
-  `🎪 Circus fun~ ${prefix}${bestMatch}?`,
-  `🦖 Dino roar~ ${prefix}${bestMatch}?`,
-  `🍁 Autumn leaves~ ${prefix}${bestMatch}?`,
-  `🎹 Piano keys~ ${prefix}${bestMatch}?`,
-  `🦈 Shark bait~ ${prefix}${bestMatch}?`,
-  `🌙 Moonbeam~ ${prefix}${bestMatch}?`,
-  `🧩 Puzzle solved~ ${prefix}${bestMatch}?`,
-
-  `💓 Heart throb~ ${prefix}${bestMatch}?`,
-  `🐻 Bear hug~ ${prefix}${bestMatch}?`,
-  `🌸 Sakura dance~ ${prefix}${bestMatch}?`,
-  `🎲 Roll the dice~ ${prefix}${bestMatch}?`,
-  `🦄 Unicorn magic~ ${prefix}${bestMatch}?`,
-  `🍬 Candy sweet~ ${prefix}${bestMatch}?`,
-  `🎭 Drama queen~ ${prefix}${bestMatch}?`,
-  `🐳 Whale hello~ ${prefix}${bestMatch}?`,
-  `🌄 Sunrise~ ${prefix}${bestMatch}?`,
-  `🧦 Cozy socks~ ${prefix}${bestMatch}?`,
-
-  `💟 Heart box~ ${prefix}${bestMatch}?`,
-  `🐙 Octopus wave~ ${prefix}${bestMatch}?`,
-  `🌷 Tulip spring~ ${prefix}${bestMatch}?`,
-  `🎨 Art class~ ${prefix}${bestMatch}?`,
-  `🦇 Bat signal~ ${prefix}${bestMatch}?`,
-  `🍪 Cookie crumble~ ${prefix}${bestMatch}?`,
-  `🎪 Big top~ ${prefix}${bestMatch}?`,
-  `🐬 Dolphin click~ ${prefix}${bestMatch}?`,
-  `🌅 Golden hour~ ${prefix}${bestMatch}?`,
-  `🧵 Thread needle~ ${prefix}${bestMatch}?`,
-
-  `❤️‍🔥 Burning love~ ${prefix}${bestMatch}?`,
-  `🐼 Panda cuddle~ ${prefix}${bestMatch}?`,
-  `🌹 Rose petal~ ${prefix}${bestMatch}?`,
-  `🎤 Mic drop~ ${prefix}${bestMatch}?`,
-  `🦅 Eagle eye~ ${prefix}${bestMatch}?`,
-  `🥞 Pancake stack~ ${prefix}${bestMatch}?`,
-  `🎡 Ferris wheel~ ${prefix}${bestMatch}?`,
-  `🦒 Giraffe neck~ ${prefix}${bestMatch}?`,
-  `🌊 Ocean wave~ ${prefix}${bestMatch}?`,
-  `🪀 Yo-yo trick~ ${prefix}${bestMatch}?`,
-
-  `💌 Love letter~ ${prefix}${bestMatch}?`,
-  `🦉 Owl post~ ${prefix}${bestMatch}?`,
-  `🍓 Berry sweet~ ${prefix}${bestMatch}?`,
-  `🎧 Headphones on~ ${prefix}${bestMatch}?`,
-  `🦜 Parrot talk~ ${prefix}${bestMatch}?`,
-  `🧋 Bubble tea~ ${prefix}${bestMatch}?`,
-  `🎪 Carnival~ ${prefix}${bestMatch}?`,
-  `🐋 Blue whale~ ${prefix}${bestMatch}?`,
-  `🌌 Milky Way~ ${prefix}${bestMatch}?`,
-  `🪁 Kite flight~ ${prefix}${bestMatch}?`,
-
-  `💞 Twin hearts~ ${prefix}${bestMatch}?`,
-  `🦊 Kitsune~ ${prefix}${bestMatch}?`,
-  `🌸 Hanami~ ${prefix}${bestMatch}?`,
-  `🎮 Game on~ ${prefix}${bestMatch}?`,
-  `🦚 Peacock fan~ ${prefix}${bestMatch}?`,
-  `🍫 Chocolate bar~ ${prefix}${bestMatch}?`,
-  `🎪 Tent show~ ${prefix}${bestMatch}?`,
-  `🐠 Fish school~ ${prefix}${bestMatch}?`,
-  `🌇 City lights~ ${prefix}${bestMatch}?`,
-  `🧩 Jigsaw piece~ ${prefix}${bestMatch}?`,
-
-  `💖 Sparkle heart~ ${prefix}${bestMatch}?`,
-  `🐧 Penguin waddle~ ${prefix}${bestMatch}?`,
-  `🌺 Frangipani~ ${prefix}${bestMatch}?`,
-  `🎪 Acrobat flip~ ${prefix}${bestMatch}?`,
-  `🦁 Lion king~ ${prefix}${bestMatch}?`,
-  `🍭 Lollipop~ ${prefix}${bestMatch}?`,
-  `🎪 Juggler toss~ ${prefix}${bestMatch}?`,
-  `🐢 Turtle pace~ ${prefix}${bestMatch}?`,
-  `🌃 Night sky~ ${prefix}${bestMatch}?`,
-  `🧵 Sew cute~ ${prefix}${bestMatch}?`,
-
-  `💘 Cupid arrow~ ${prefix}${bestMatch}?`,
-  `🦄 Mythical~ ${prefix}${bestMatch}?`,
-  `🌼 Daisy chain~ ${prefix}${bestMatch}?`,
-  `🎪 Clown nose~ ${prefix}${bestMatch}?`,
-  `🦅 Soaring high~ ${prefix}${bestMatch}?`,
-  `🍎 Apple pie~ ${prefix}${bestMatch}?`,
-  `🎪 Ringmaster~ ${prefix}${bestMatch}?`,
-  `🐬 Splash jump~ ${prefix}${bestMatch}?`,
-  `🌅 Dawn break~ ${prefix}${bestMatch}?`,
-  `🧦 Knit one~ ${prefix}${bestMatch}?`,
-
-  `💝 With love~ ${prefix}${bestMatch}?`,
-  `🐼 Bamboo love~ ${prefix}${bestMatch}?`,
-  `🌷 Dutch tulip~ ${prefix}${bestMatch}?`,
-  `🎨 Paint splash~ ${prefix}${bestMatch}?`,
-  `🦇 Night flyer~ ${prefix}${bestMatch}?`,
-  `🍪 Milk & cookies~ ${prefix}${bestMatch}?`,
-  `🎪 Trapeze artist~ ${prefix}${bestMatch}?`,
-  `🐋 Gentle giant~ ${prefix}${bestMatch}?`,
-  `🌌 Star dust~ ${prefix}${bestMatch}?`,
-  `🪀 Up down~ ${prefix}${bestMatch}?`,
-
-  `💗 Pulse quick~ ${prefix}${bestMatch}?`,
-  `🐰 Carrot crunch~ ${prefix}${bestMatch}?`,
-  `🌺 Tropical bloom~ ${prefix}${bestMatch}?`,
-  `🎤 Sing along~ ${prefix}${bestMatch}?`,
-  `🦚 Feather display~ ${prefix}${bestMatch}?`,
-  `🍫 Cocoa bean~ ${prefix}${bestMatch}?`,
-  `🎡 View from top~ ${prefix}${bestMatch}?`,
-  `🦒 Tall order~ ${prefix}${bestMatch}?`,
-  `🌊 Tide change~ ${prefix}${bestMatch}?`,
-  `🧩 Perfect fit~ ${prefix}${bestMatch}?`,
-
-  `💓 Rhythm beat~ ${prefix}${bestMatch}?`,
-  `🐻 Hibernate~ ${prefix}${bestMatch}?`,
-  `🌸 Petal fall~ ${prefix}${bestMatch}?`,
-  `🎲 Lucky roll~ ${prefix}${bestMatch}?`,
-  `🦄 Horn glow~ ${prefix}${bestMatch}?`,
-  `🍬 Sugar rush~ ${prefix}${bestMatch}?`,
-  `🎭 Mask reveal~ ${prefix}${bestMatch}?`,
-  `🐳 Spout water~ ${prefix}${bestMatch}?`,
-  `🌄 Mountain top~ ${prefix}${bestMatch}?`,
-  `🧦 Warm toes~ ${prefix}${bestMatch}?`,
-
-  `💟 Charmed life~ ${prefix}${bestMatch}?`,
-  `🐙 Ink cloud~ ${prefix}${bestMatch}?`,
-  `🌷 Spring bulb~ ${prefix}${bestMatch}?`,
-  `🎨 Color palette~ ${prefix}${bestMatch}?`,
-  `🦇 Echo location~ ${prefix}${bestMatch}?`,
-  `🍪 Oven fresh~ ${prefix}${bestMatch}?`,
-  `🎪 Cotton candy~ ${prefix}${bestMatch}?`,
-  `🐬 Echo sound~ ${prefix}${bestMatch}?`,
-  `🌅 Horizon line~ ${prefix}${bestMatch}?`,
-  `🧵 Needle thread~ ${prefix}${bestMatch}?`,
-
-  `❤️‍🔥 Passion fire~ ${prefix}${bestMatch}?`,
-  `🐼 Black & white~ ${prefix}${bestMatch}?`,
-  `🌹 Thorn & bloom~ ${prefix}${bestMatch}?`,
-  `🎤 Voice note~ ${prefix}${bestMatch}?`,
-  `🦅 Sky hunter~ ${prefix}${bestMatch}?`,
-  `🥞 Maple syrup~ ${prefix}${bestMatch}?`,
-  `🎡 Spinning round~ ${prefix}${bestMatch}?`,
-  `🦒 Leaf munch~ ${prefix}${bestMatch}?`,
-  `🌊 Deep blue~ ${prefix}${bestMatch}?`,
-  `🪀 Loop de loop~ ${prefix}${bestMatch}?`,
-
-  `💌 Sealed with kiss~ ${prefix}${bestMatch}?`,
-  `🦉 Night watch~ ${prefix}${bestMatch}?`,
-  `🍓 Seed speckle~ ${prefix}${bestMatch}?`,
-  `🎧 Sound waves~ ${prefix}${bestMatch}?`,
-  `🦜 Rainbow feathers~ ${prefix}${bestMatch}?`,
-  `🧋 Pearl bubble~ ${prefix}${bestMatch}?`,
-  `🎪 Ticket stub~ ${prefix}${bestMatch}?`,
-  `🐋 Song deep~ ${prefix}${bestMatch}?`,
-  `🌌 Cosmic dust~ ${prefix}${bestMatch}?`,
-  `🪁 Wind dance~ ${prefix}${bestMatch}?`,
-
-  `💞 Double date~ ${prefix}${bestMatch}?`,
-  `🦊 Tail flick~ ${prefix}${bestMatch}?`,
-  `🌸 Blossom view~ ${prefix}${bestMatch}?`,
-  `🎮 Button mash~ ${prefix}${bestMatch}?`,
-  `🦚 Eye spot~ ${prefix}${bestMatch}?`,
-  `🍫 Sweet melt~ ${prefix}${bestMatch}?`,
-  `🎪 Magic show~ ${prefix}${bestMatch}?`,
-  `🐠 Coral reef~ ${prefix}${bestMatch}?`,
-  `🌇 Twilight glow~ ${prefix}${bestMatch}?`,
-  `🧩 Edge piece~ ${prefix}${bestMatch}?`,
-
-  `💖 Glitter heart~ ${prefix}${bestMatch}?`,
-  `🐧 Ice slide~ ${prefix}${bestMatch}?`,
-  `🌺 Lei aloha~ ${prefix}${bestMatch}?`,
-  `🎪 Tightrope walk~ ${prefix}${bestMatch}?`,
-  `🦁 Mane event~ ${prefix}${bestMatch}?`,
-  `🍭 Sweet stick~ ${prefix}${bestMatch}?`,
-  `🎪 Human cannon~ ${prefix}${bestMatch}?`,
-  `🐢 Shell home~ ${prefix}${bestMatch}?`,
-  `🌃 Constellation~ ${prefix}${bestMatch}?`,
-  `🧵 Stitch time~ ${prefix}${bestMatch}?`
-];
-
-// Prefix only responses
+// Premium prefix only responses
 const prefixOnlyResponses = [
-	"That's just my prefix. Try /help to see all available commands",
-	"Try a command like /help",
-	"Looking for something? Try /gpt",
-	"Need help? Use /help for commands!",
-	"This is my prefix only, try /hgen",
-	"Just the prefix won't do! Try /help",
-	"⚠️ Add a command after the prefix!"
+	"✨ That's just my prefix darling~ Try -help to see all available commands!",
+	"🎀 Just the prefix won't do cutie! Try -help for commands~",
+	"💫 Oopsie~ That's only my prefix! Try -gpt or /help babe!",
+	"🌸 Prefix detected! Need help sweetie? Try -help for commands~",
+	"🦋 That's my prefix honey~ Try adding a command like -help",
+	"💞 Just the prefix? Try -i create a beautiful car or /help for fun commands cutie!",
+	"🎵 Melodic prefix~ but try -help for the real symphony!",
+	"🍯 Sweet prefix! Now try -help for the honey commands~",
+	"🌟 Sparkly prefix! Add a command like -gpt for magic!",
+	"💌 Love the prefix! Now try -help for love commands~"
 ];
+
+// Premium admin reaction emojis for unsend
+const adminUnsendEmojis = ["😠", "🗑️", "❌", "🚫", "💥", "🧹", "📛", "⛔", "🔞", "💢"];
+
+// Premium welcome features
+const welcomeMessages = [
+	`🌸 Welcome {userName} to {boxName}! We're so happy to have you here cutie~ 💖`,
+	`✨ {userName} just joined the party! Let's give them a warm welcome everyone~ 🎉`,
+	`💫 A wild {userName} appeared! Welcome to {boxName} sweetie~ 🥰`,
+	`🎀 Look who's here! Welcome {userName} to our lovely group~ 💕`,
+	`🦋 Welcome {userName}! May your stay in {boxName} be filled with joy and laughter~ 💝`,
+	`🍯 Sweet! {userName} just joined {boxName}! Welcome honey~ 🐝`,
+	`🌟 New star alert! Welcome {userName} to {boxName}~ Shine bright! ✨`,
+	`💞 Love is in the air! Welcome {userName} to our family~ 💘`,
+	`🎵 Welcome {userName} to {boxName}! Let's make beautiful memories together~ 🎶`,
+	`🍩 Donut worry, be happy! Welcome {userName} to {boxName}~ 🍪`
+];
+
+// Premium anti-spam system
+class AntiSpamSystem {
+	constructor() {
+		this.userMessages = new Map();
+		this.floodThreshold = 8; // messages
+		this.timeWindow = 5000; // 5 seconds
+		this.muteDuration = 60000; // 1 minute
+	}
+
+	checkSpam(userID) {
+		const now = Date.now();
+		if (!this.userMessages.has(userID)) {
+			this.userMessages.set(userID, []);
+		}
+
+		const userMessages = this.userMessages.get(userID);
+		
+		// Clean old messages
+		const recentMessages = userMessages.filter(time => now - time < this.timeWindow);
+		recentMessages.push(now);
+		
+		this.userMessages.set(userID, recentMessages);
+
+		// Check if user is spamming
+		if (recentMessages.length >= this.floodThreshold) {
+			return true;
+		}
+		
+		return false;
+	}
+
+	clearOldMessages() {
+		const now = Date.now();
+		for (const [userID, messages] of this.userMessages.entries()) {
+			const recentMessages = messages.filter(time => now - time < this.timeWindow * 2);
+			if (recentMessages.length === 0) {
+				this.userMessages.delete(userID);
+			} else {
+				this.userMessages.set(userID, recentMessages);
+			}
+		}
+	}
+}
+
+const antiSpam = new AntiSpamSystem();
+
+// Premium auto-cleaner for spam system
+setInterval(() => {
+	antiSpam.clearOldMessages();
+}, 30000);
 
 module.exports = function (api, threadModel, userModel, dashBoardModel, globalModel, usersData, threadsData, dashBoardData, globalData) {
 	return async function (event, message) {
@@ -423,7 +319,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		const { autoRefreshThreadInfoFirstTime } = config.database;
 		let { hideNotiMessage = {} } = config;
 
-		const { body, messageID, threadID, isGroup } = event;
+		const { body, messageID, threadID, isGroup, type, logMessageType, logMessageData } = event;
 
 		// Check if has threadID
 		if (!threadID)
@@ -481,6 +377,46 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			};
 		}
 
+		// ✅ PREMIUM FEATURE: Handle welcome messages
+		async function handleWelcomeMessage() {
+			if (isGroup && type === "event" && logMessageType === "log:subscribe") {
+				const addedParticipants = logMessageData.addedParticipants || [];
+				for (const user of addedParticipants) {
+					const userName = user.fullName || "New Member";
+					const boxName = threadData.threadName || "the group";
+					
+					const welcomeMsg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)]
+						.replace(/{userName}/g, userName)
+						.replace(/{boxName}/g, boxName);
+					
+					await message.reply(welcomeMsg);
+					log.info("WELCOME", `Welcomed ${userName} to ${boxName}`);
+				}
+			}
+		}
+
+		// ✅ PREMIUM FEATURE: Anti-spam protection
+		async function checkAntiSpam() {
+			if (body && body.startsWith(prefix)) {
+				if (antiSpam.checkSpam(senderID)) {
+					if (!config.adminBot.includes(senderID)) {
+						const spamMsg = `🚫 *Anti-Spam System*\n\n${userData.name}, you're sending commands too fast! Please wait a moment cutie~ 💖`;
+						await message.reply(spamMsg);
+						log.warn("ANTI-SPAM", `User ${senderID} flagged for spam in ${threadID}`);
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		// ✅ PREMIUM FEATURE: Smart command logger
+		function logCommandUsage(commandName, args, success = true) {
+			const status = success ? "✅" : "❌";
+			const argsStr = args.length > 0 ? ` | Args: ${args.join(" ")}` : "";
+			log.command(`${status} ${commandName} | User: ${userData.name} (${senderID}) | Thread: ${threadID}${argsStr}`);
+		}
+
 		/*
 			+-----------------------------------------------+
 			|							 WHEN CALL COMMAND								|
@@ -492,8 +428,12 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			if (!body || !body.startsWith(prefix))
 				return;
 
-			// ✅ Feature 1: Prefix Only Text Response
-			// Check if message is just the prefix with no command
+			// ✅ PREMIUM FEATURE: Anti-spam check
+			if (await checkAntiSpam()) {
+				return;
+			}
+
+			// ✅ PREMIUM FEATURE: Prefix Only Text Response
 			if (body.trim() === prefix.trim()) {
 				const randomResponse = prefixOnlyResponses[Math.floor(Math.random() * prefixOnlyResponses.length)];
 				return await message.reply(randomResponse);
@@ -537,39 +477,29 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			
 			// —————  CHECK GROUP AUTHORIZATION  ————— //
 			if (isGroup && !config.adminBot.includes(senderID)) {
-				// Skip authorization check for approve command (admins only anyway)
 				if (commandName !== "approve" && threadData.data.groupApproved !== true) {
-					const unauthorizedMsg = "⚠️ This group is not authorized to use this bot. Please join bot supportgc: https://m.me/j/AbZX5he4yIFsgui_/\n\n to join and get approval from admin.";
+					const unauthorizedMsg = `⚠️ *Group Authorization Required*\n\nThis group is not authorized to use this bot cutie~ 💖\n\nPlease join our support group for approval:\nhttps://m.me/j/AbZX5he4yIFsgui_/\n\nThen contact admin with:\n${prefix}approve <groupID>\n\nYour Group ID: ${threadID}`;
 					return await message.reply(unauthorizedMsg);
 				}
 			}
 
 			if (!command) {
-				// ✅ Feature 2: Wrong Command Suggestion with Random Messages
+				// ✅ PREMIUM FEATURE: Smart Command Suggestion
 				if (commandName && !hideNotiMessage.commandNotFound) {
-					// Get all available command names and aliases
 					const allCommands = Array.from(GoatBot.commands.keys());
 					const allAliases = Array.from(GoatBot.aliases.keys());
 					const allAvailableCommands = [...allCommands, ...allAliases];
 
-					// Find the closest match
 					const { bestMatch, bestDistance } = findBestMatch(commandName, allAvailableCommands);
 
-					// If we found a good match, suggest it with random message
 					if (bestMatch && bestDistance <= 3) {
-						const randomSuggestion = wrongCommandSuggestions[Math.floor(Math.random() * wrongCommandSuggestions.length)];
-						const finalMessage = randomSuggestion
-							.replace(/{prefix}/g, prefix)
-							.replace(/{bestMatch}/g, bestMatch)
-							.replace(/{commandName}/g, commandName);
-						
-						return await message.reply(finalMessage);
+						const suggestionMessage = getWrongCommandSuggestion(prefix, bestMatch);
+						return await message.reply(suggestionMessage);
 					}
 
-					// If no good match found, use original error message
-					return await message.reply(
-						utils.getText({ lang: langCode, head: "handlerEvents" }, "commandNotFound", commandName, prefix)
-					);
+					// Premium error message for no match found
+					const errorMsg = `❌ *Command Not Found*\n\n\"${commandName}\" doesn't exist cutie~ 💔\n\n💡 Try: ${prefix}help\n🌸 Or check spelling sweetie!`;
+					return await message.reply(errorMsg);
 				}
 				else if (!hideNotiMessage.commandNotFound) {
 					return await message.reply(
@@ -587,9 +517,9 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			if (needRole > role) {
 				if (!hideNotiMessage.needRoleToUseCmd) {
 					if (needRole == 1)
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdmin", commandName));
+						return await message.reply(`🚫 *Admin Only*\n\n\"${commandName}\" can only be used by group admins cutie~ 💖\n\nAsk your group admin to enable this command!`);
 					else if (needRole == 2)
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdminBot2", commandName));
+						return await message.reply(`🔒 *Bot Admin Only*\n\n\"${commandName}\" is restricted to bot admins only sweetie~ 💝\n\nContact bot owner for access!`);
 				}
 				else {
 					return true;
@@ -605,24 +535,39 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			const cooldownCommand = getCoolDown * 1000;
 			if (timestamps[senderID]) {
 				const expirationTime = timestamps[senderID] + cooldownCommand;
-				if (dateNow < expirationTime)
-					return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "waitingForCommand", ((expirationTime - dateNow) / 1000).toString().slice(0, 3)));
+				if (dateNow < expirationTime) {
+					const remainingTime = ((expirationTime - dateNow) / 1000).toFixed(1);
+					return await message.reply(`⏰ *Command Cooldown*\n\nPlease wait ${remainingTime}s before using \"${commandName}\" again cutie~ 💖\n\nTake a deep breath! 🌸`);
+				}
 			}
 			// ——————————————— RUN COMMAND ——————————————— //
 			const time = getTime("DD/MM/YYYY HH:mm:ss");
 			isUserCallCommand = true;
 			try {
-				// analytics command call
+				// ✅ PREMIUM FEATURE: Enhanced analytics
 				(async () => {
 					const analytics = await globalData.get("analytics", "data", {});
-					if (!analytics[commandName])
-						analytics[commandName] = 0;
-					analytics[commandName]++;
+					if (!analytics[commandName]) {
+						analytics[commandName] = {
+							count: 0,
+							lastUsed: time,
+							users: new Set(),
+							groups: new Set()
+						};
+					}
+					analytics[commandName].count++;
+					analytics[commandName].lastUsed = time;
+					analytics[commandName].users.add(senderID);
+					if (isGroup) analytics[commandName].groups.add(threadID);
+					
 					await globalData.set("analytics", analytics, "data");
 				})();
 
 				createMessageSyntaxError(commandName);
 				const getText2 = createGetText2(langCode, `${process.cwd()}/languages/cmds/${langCode}.js`, prefix, command);
+				
+				// ✅ PREMIUM FEATURE: Command execution with timing
+				const startTime = Date.now();
 				await command.onStart({
 					...parameters,
 					args,
@@ -630,12 +575,22 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 					getLang: getText2,
 					removeCommandNameFromBody
 				});
+				const executionTime = Date.now() - startTime;
+				
 				timestamps[senderID] = dateNow;
-				log.info("CALL COMMAND", `${commandName} | ${userData.name} | ${senderID} | ${threadID} | ${args.join(" ")}`);
+				
+				// ✅ PREMIUM FEATURE: Enhanced logging
+				logCommandUsage(commandName, args, true);
+				log.info("COMMAND EXECUTION", `${commandName} executed in ${executionTime}ms by ${userData.name} in ${threadID}`);
+				
 			}
 			catch (err) {
-				log.err("CALL COMMAND", `An error occurred when calling the command ${commandName}`, err);
-				return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
+				logCommandUsage(commandName, args, false);
+				log.err("COMMAND ERROR", `Error in ${commandName}: ${err.message}`, err);
+				
+				// ✅ PREMIUM FEATURE: Enhanced error messages
+				const errorMsg = `💥 *Command Error*\n\nOops! Something went wrong with \"${commandName}\" cutie~ 💔\n\n🕒 Time: ${time}\n🔧 Error: ${err.message}\n\nDon't worry, our devs will fix it soon! 🌸`;
+				return await message.reply(errorMsg);
 			}
 		}
 
@@ -665,7 +620,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 
 				if (getType(command.onChat) == "Function") {
 					const defaultOnChat = command.onChat;
-					// convert to AsyncFunction
 					command.onChat = async function () {
 						return defaultOnChat(...arguments);
 					};
@@ -684,7 +638,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 								return;
 							try {
 								await handler();
-								log.info("onChat", `${commandName} | ${userData.name} | ${senderID} | ${threadID} | ${args.join(" ")}`);
+								log.info("ON_CHAT", `${commandName} | ${userData.name} | ${threadID}`);
 							}
 							catch (err) {
 								await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred2", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
@@ -692,7 +646,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 						}
 					})
 					.catch(err => {
-						log.err("onChat", `An error occurred when calling the command onChat ${commandName}`, err);
+						log.err("ON_CHAT_ERROR", `Error in onChat ${commandName}`, err);
 					});
 			}
 		}
@@ -722,7 +676,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 
 				if (getType(command.onAnyEvent) == "Function") {
 					const defaultOnAnyEvent = command.onAnyEvent;
-					// convert to AsyncFunction
 					command.onAnyEvent = async function () {
 						return defaultOnAnyEvent(...arguments);
 					};
@@ -738,16 +691,16 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 						if (typeof handler == "function") {
 							try {
 								await handler();
-								log.info("onAnyEvent", `${commandName} | ${senderID} | ${userData.name} | ${threadID}`);
+								log.info("ON_ANY_EVENT", `${commandName} | ${senderID} | ${threadID}`);
 							}
 							catch (err) {
 								message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred7", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
-								log.err("onAnyEvent", `An error occurred when calling the command onAnyEvent ${commandName}`, err);
+								log.err("ON_ANY_EVENT_ERROR", `Error in onAnyEvent ${commandName}`, err);
 							}
 						}
 					})
 					.catch(err => {
-						log.err("onAnyEvent", `An error occurred when calling the command onAnyEvent ${commandName}`, err);
+						log.err("ON_ANY_EVENT_ERROR", `Error in onAnyEvent ${commandName}`, err);
 					});
 			}
 		}
@@ -776,7 +729,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 
 				if (getType(command.onFirstChat) == "Function") {
 					const defaultOnFirstChat = command.onFirstChat;
-					// convert to AsyncFunction
 					command.onFirstChat = async function () {
 						return defaultOnFirstChat(...arguments);
 					};
@@ -795,7 +747,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 								return;
 							try {
 								await handler();
-								log.info("onFirstChat", `${commandName} | ${userData.name} | ${senderID} | ${threadID} | ${args.join(" ")}`);
+								log.info("ON_FIRST_CHAT", `${commandName} | ${userData.name} | ${threadID}`);
 							}
 							catch (err) {
 								await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred2", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
@@ -803,276 +755,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 						}
 					})
 					.catch(err => {
-						log.err("onFirstChat", `An error occurred when calling the command onFirstChat ${commandName}`, err);
+						log.err("ON_FIRST_CHAT_ERROR", `Error in onFirstChat ${commandName}`, err);
 					});
-			}
 		}
-
-		/* 
-		 +------------------------------------------------+
-		 |                    ON REPLY                    |
-		 +------------------------------------------------+
-		*/
-		async function onReply() {
-			if (!event.messageReply)
-				return;
-			const { onReply } = GoatBot;
-			const Reply = onReply.get(event.messageReply.messageID);
-			if (!Reply)
-				return;
-			Reply.delete = () => onReply.delete(messageID);
-			const commandName = Reply.commandName;
-			if (!commandName) {
-				message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "cannotFindCommandName"));
-				return log.err("onReply", `Can't find command name to execute this reply!`, Reply);
-			}
-			const command = GoatBot.commands.get(commandName);
-			if (!command) {
-				message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "cannotFindCommand", commandName));
-				return log.err("onReply", `Command "${commandName}" not found`, Reply);
-			}
-
-			// —————————————— CHECK PERMISSION —————————————— //
-			const roleConfig = getRoleConfig(utils, command, isGroup, threadData, commandName);
-			const needRole = roleConfig.onReply;
-			if (needRole > role) {
-				if (!hideNotiMessage.needRoleToUseCmdOnReply) {
-					if (needRole == 1)
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdminToUseOnReply", commandName));
-					else if (needRole == 2)
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdminBot2ToUseOnReply", commandName));
-				}
-				else {
-					return true;
-				}
-			}
-
-			const getText2 = createGetText2(langCode, `${process.cwd()}/languages/cmds/${langCode}.js`, prefix, command);
-			const time = getTime("DD/MM/YYYY HH:mm:ss");
-			try {
-				if (!command)
-					throw new Error(`Cannot find command with commandName: ${commandName}`);
-				const args = body ? body.split(/ +/) : [];
-				createMessageSyntaxError(commandName);
-				if (isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, commandName, message, langCode))
-					return;
-				await command.onReply({
-					...parameters,
-					Reply,
-					args,
-					commandName,
-					getLang: getText2
-				});
-				log.info("onReply", `${commandName} | ${userData.name} | ${senderID} | ${threadID} | ${args.join(" ")}`);
-			}
-			catch (err) {
-				log.err("onReply", `An error occurred when calling the command onReply ${commandName}`, err);
-				await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred3", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
-			}
-		}
-
-		/*
-		 +------------------------------------------------+
-		 |                   ON REACTION                  |
-		 +------------------------------------------------+
-		*/
-		async function onReaction() {
-			// ✅ Feature 3: Admin Reaction Unsend
-			// Check if admin reacts with 😠 emoji to unsend message
-			if (event.reaction === "😠") {
-				// Check if user is admin (role 1 = box admin, role 2 = bot admin)
-				if (role >= 1) {
-					try {
-						await api.unsendMessage(messageID);
-						log.info("ADMIN UNSEND", `Message ${messageID} unsent by admin ${senderID}`);
-						return; // Exit early after unsending
-					} catch (err) {
-						log.err("ADMIN UNSEND", `Failed to unsend message ${messageID}`, err);
-					}
-				}
-			}
-
-			const { onReaction } = GoatBot;
-			const Reaction = onReaction.get(messageID);
-			if (!Reaction)
-				return;
-			Reaction.delete = () => onReaction.delete(messageID);
-			const commandName = Reaction.commandName;
-			if (!commandName) {
-				message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "cannotFindCommandName"));
-				return log.err("onReaction", `Can't find command name to execute this reaction!`, Reaction);
-			}
-			const command = GoatBot.commands.get(commandName);
-			if (!command) {
-				message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "cannotFindCommand", commandName));
-				return log.err("onReaction", `Command "${commandName}" not found`, Reaction);
-			}
-
-			// —————————————— CHECK PERMISSION —————————————— //
-			const roleConfig = getRoleConfig(utils, command, isGroup, threadData, commandName);
-			const needRole = roleConfig.onReaction;
-			if (needRole > role) {
-				if (!hideNotiMessage.needRoleToUseCmdOnReaction) {
-					if (needRole == 1)
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdminToUseOnReaction", commandName));
-					else if (needRole == 2)
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdminBot2ToUseOnReaction", commandName));
-				}
-				else {
-					return true;
-				}
-			}
-			// —————————————————————————————————————————————— //
-
-			const time = getTime("DD/MM/YYYY HH:mm:ss");
-			try {
-				if (!command)
-					throw new Error(`Cannot find command with commandName: ${commandName}`);
-				const getText2 = createGetText2(langCode, `${process.cwd()}/languages/cmds/${langCode}.js`, prefix, command);
-				const args = [];
-				createMessageSyntaxError(commandName);
-				if (isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, commandName, message, langCode))
-					return;
-				await command.onReaction({
-					...parameters,
-					Reaction,
-					args,
-					commandName,
-					getLang: getText2
-				});
-				log.info("onReaction", `${commandName} | ${userData.name} | ${senderID} | ${threadID} | ${event.reaction}`);
-			}
-			catch (err) {
-				log.err("onReaction", `An error occurred when calling the command onReaction ${commandName}`, err);
-				await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred4", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
-			}
-		}
-
-		/*
-		 +------------------------------------------------+
-		 |                 EVENT COMMAND                  |
-		 +------------------------------------------------+
-		*/
-		async function handlerEvent() {
-			const { author } = event;
-			const allEventCommand = GoatBot.eventCommands.entries();
-			for (const [key] of allEventCommand) {
-				const getEvent = GoatBot.eventCommands.get(key);
-				if (!getEvent)
-					continue;
-				const commandName = getEvent.config.name;
-				const getText2 = createGetText2(langCode, `${process.cwd()}/languages/events/${langCode}.js`, prefix, getEvent);
-				const time = getTime("DD/MM/YYYY HH:mm:ss");
-				try {
-					const handler = await getEvent.onStart({
-						...parameters,
-						commandName,
-						getLang: getText2
-					});
-					if (typeof handler == "function") {
-						await handler();
-						log.info("EVENT COMMAND", `Event: ${commandName} | ${author} | ${userData.name} | ${threadID}`);
-					}
-				}
-				catch (err) {
-					log.err("EVENT COMMAND", `An error occurred when calling the command event ${commandName}`, err);
-					await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred5", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
-				}
-			}
-		}
-
-		/*
-		 +------------------------------------------------+
-		 |                    ON EVENT                    |
-		 +------------------------------------------------+
-		*/
-		async function onEvent() {
-			const allOnEvent = GoatBot.onEvent || [];
-			const args = [];
-			const { author } = event;
-			for (const key of allOnEvent) {
-				if (typeof key !== "string")
-					continue;
-				const command = GoatBot.commands.get(key);
-				if (!command)
-					continue;
-				const commandName = command.config.name;
-				const time = getTime("DD/MM/YYYY HH:mm:ss");
-				createMessageSyntaxError(commandName);
-
-				const getText2 = createGetText2(langCode, `${process.cwd()}/languages/events/${langCode}.js`, prefix, command);
-
-				if (getType(command.onEvent) == "Function") {
-					const defaultOnEvent = command.onEvent;
-					// convert to AsyncFunction
-					command.onEvent = async function () {
-						return defaultOnEvent(...arguments);
-					};
-				}
-
-				command.onEvent({
-					...parameters,
-					args,
-					commandName,
-					getLang: getText2
-				})
-					.then(async (handler) => {
-						if (typeof handler == "function") {
-							try {
-								await handler();
-								log.info("onEvent", `${commandName} | ${author} | ${userData.name} | ${threadID}`);
-							}
-							catch (err) {
-								message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "errorOccurred6", time, commandName, removeHomeDir(err.stack ? err.stack.split("\n").slice(0, 5).join("\n") : JSON.stringify(err, null, 2))));
-								log.err("onEvent", `An error occurred when calling the command onEvent ${commandName}`, err);
-							}
-						}
-					})
-					.catch(err => {
-						log.err("onEvent", `An error occurred when calling the command onEvent ${commandName}`, err);
-					});
-			}
-		}
-
-		/*
-		 +------------------------------------------------+
-		 |                    PRESENCE                    |
-		 +------------------------------------------------+
-		*/
-		async function presence() {
-			// Your code here
-		}
-
-		/*
-		 +------------------------------------------------+
-		 |                  READ RECEIPT                  |
-		 +------------------------------------------------+
-		*/
-		async function read_receipt() {
-			// Your code here
-		}
-
-		/*
-		 +------------------------------------------------+
-		 |                   		 TYP                    	|
-		 +------------------------------------------------+
-		*/
-		async function typ() {
-			// Your code here
-		}
-
-		return {
-			onAnyEvent,
-			onFirstChat,
-			onChat,
-			onStart,
-			onReaction,
-			onReply,
-			onEvent,
-			handlerEvent,
-			presence,
-			read_receipt,
-			typ
-		};
-	};
-};
