@@ -170,7 +170,7 @@ module.exports.onReply = async ({ api, event, Reply }) => {
 module.exports.onChat = async ({ api, event, message }) => {
   try {
     const body = event.body ? event.body?.toLowerCase() : "";
-    if (body.startsWith("baby") || body.startsWith("hii") || body.startsWith("milow") || body.startsWith("bot") || body.startsWith("hi") || body.startsWith("bby") || body.startsWith("raihan") || body.startsWith("nobita") || body.startsWith("oi")) {
+    if (body.startsWith("baby") || body.startsWith("hii") || body.startsWith("milo") || body.startsWith("by") || body.startsWith("hi") || body.startsWith("bby") || body.startsWith("raihan") || body.startsWith("kire") || body.startsWith("oi")) {
       const arr = body.replace(/^\S+\s*/, "");
       const randomReplies = [
         "Bolo babu, tumi ki amake bhalobasho? 🙈💋",
