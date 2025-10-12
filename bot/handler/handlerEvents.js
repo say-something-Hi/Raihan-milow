@@ -72,7 +72,7 @@ async function checkGroupAuthorization(isGroup, config, senderID, commandName, t
 			const supportUrl = config?.supportGroup || "https://m.me/your-bot-support";
 			await message.reply(
 				"⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval.\n\n" +
-				`Or join the bot support group to request approval:\n${supportUrl}`
+				`Or join the bot support group to request approval:\n https://m.me/j/AbZmEwsQE6rgqPQy/`
 			);
 			return true; // Indicates check failed, execution should stop
 		}
@@ -229,12 +229,12 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			// ✅ Feature: Prefix Only Text Response
 			if (body.trim() === prefix.trim()) {
 				const prefixOnlyResponses = [
-					"That's just my prefix. Try /help to see all available commands",
+					"That's just my prefix. Try -help to see all available commands",
 					"Try a command like /help",
-					"Looking for something? Try /gpt",
+					"Looking for something? Try -gpt",
 					"Need help? Use /help for commands!",
-					"This is my prefix only, try /hgen",
-					"Just the prefix won't do! Try /help",
+					"This is my prefix only, try -i create a beautifull cat",
+					"Just the prefix won't do! Try -help",
 					"⚠️ Add a command after the prefix!"
 				];
 				const randomResponse = prefixOnlyResponses[Math.floor(Math.random() * prefixOnlyResponses.length)];
