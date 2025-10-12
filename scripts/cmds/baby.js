@@ -1,4 +1,4 @@
--cmd install const axios = require('axios');
+const axios = require('axios');
 
 // Helper function to format text into a stylish font
 const formatText = (text) => {
@@ -308,4 +308,4 @@ module.exports.onChat = async ({ api, event, message }) => {
   } catch (err) {
     return api.sendMessage(formatText(`Error: ${err.message}`), event.threadID, event.messageID);
   }
-}; oajsm.js
+};
