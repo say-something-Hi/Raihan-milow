@@ -52,7 +52,7 @@ module.exports = {
       const ctx = canvas.getContext("2d");
 
       // Step 4: Load Background
-      const bgUrl = "https://i.imgur.com/b4rDlP9.png";
+      const bgUrl = "https://i.imgur.com/O8V4A01.jpeg";
       const background = await loadImage(bgUrl);
       ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
@@ -66,7 +66,7 @@ module.exports = {
       ctx.shadowOffsetY = 2;
       ctx.shadowBlur = 4;
 
-      ctx.fillText("🤖 BOT UPTIME", 60, 100);
+      ctx.fillText("✿ BOT UPTIME", 60, 100);
       ctx.fillText(`⏳ ${upTimeStr}`, 60, 200);
       ctx.fillText(`⚡ Ping: ${ping}ms`, 60, 280);
       ctx.fillText(` Owner: Raihan `, 60, 360);
