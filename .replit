@@ -5,5 +5,5 @@ run = "npm start"
 expertMode = true
 
 [[ports]]
-localPort = 3000
+localPort = 30000
 externalPort = 80
