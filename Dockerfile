@@ -1,5 +1,5 @@
-FROM node:16
+FROM node:18
 COPY . .
 RUN npm install
-EXPOSE 3000
+EXPOSE 300
 CMD [ "node" ,"index.js" ]
