@@ -32,8 +32,8 @@ const STORE_CONFIG = {
   currency: "৳",
   adminThreadId: "1843705779576417",
   storeStatus: "open",
-  phone: "+880 XXXX-XXXXXX",
-  email: "support@megamartbd.com",
+  phone: "+8801330513726",
+  email: "mailraihanpremium@gmail.com",
   features: {
     wishlist: true,
     orderTracking: true,
