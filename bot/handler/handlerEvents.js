@@ -162,6 +162,7 @@ function levenshteinDistance(str1, str2) {
 	}
 	return matrix[str2.length][str1.length];
 }
+
 // Find best matching command
 function findBestMatch(inputCommand, allCommands) {
 	let bestMatch = null;
@@ -178,100 +179,29 @@ function findBestMatch(inputCommand, allCommands) {
 
 	return { bestMatch, bestDistance };
 }
-// Sequential command suggestions with better text
-let suggestionIndex = 0;
+
+// Random command suggestions with better text
 function getWrongCommandSuggestion(prefix, bestMatch) {
 	const wrongCommandSuggestions = [
-		`💖 Oopsie! Did you mean "${bestMatch}" darling? 💕`,
-		`😘 Close but no cigar! Try "${bestMatch}" sweetie~ ✨`,
-		`🌟 Looking for "${bestMatch}" perhaps, my love? 💫`,
-		`💋 Command not found, but "${bestMatch}" might be what you need honey~ 🍯`,
-		`🥰 "${bestMatch}" could be your soulmate command! 💞`,
-		`💝 Not sure about that command, try "${bestMatch}" babe~ 💋`,
-		`✨ I think you meant "${bestMatch}", my dear~ 💫`,
-		`🌹 That command doesn't exist, but "${bestMatch}" is waiting for you! 💐`,
-		`💕 Hmm, not familiar with that. Want "${bestMatch}" instead? 😉`,
-		`🔥 Unrecognized command! How about "${bestMatch}" to spice things up? 🌶️`,
-		`🎀 No such command, but "${bestMatch}" is available cutie~ 💝`,
-		`💫 Command not available, "${bestMatch}" could work magic! ✨`,
-		`🍭 Not found in my list, maybe "${bestMatch}" will satisfy your sweet tooth? 🍬`,
-		`💘 That one's not here, but "${bestMatch}" is ready to steal your heart! 💖`,
-		`🌟 I don't have that command, but "${bestMatch}" is shining bright for you! ⭐`,
-		`💋 Unknown command! Did you mean "${bestMatch}" sweetheart? 💋`,
-		`💕 Can't find that, but "${bestMatch}" might be your perfect match! 💑`,
-		`✨ Not in my commands, try "${bestMatch}" for some sparkle! 💎`,
-		`🥰 That doesn't ring a bell, maybe "${bestMatch}" will make you smile? 😊`,
-		`💖 Command not recognized, but "${bestMatch}" is valid and lovely! 🌸`,
-		`💫 Seems like a typo! Did you mean "${bestMatch}" my love? 💕`,
-		`🌟 Close but not quite! Try "${bestMatch}" for stellar results! 🚀`,
-		`💝 Almost got it! The command is "${bestMatch}" darling~ 💋`,
-		`✨ That's not in my vocabulary, maybe "${bestMatch}" will speak to your heart? 💗`,
-		`🥰 Command not in dictionary, but "${bestMatch}" is poetry in motion! 📝`,
-		`💖 Invalid command detected! Similar: "${bestMatch}" sweetie~ 🍬`,
-		`🌟 No match found! Closest: "${bestMatch}" shining star! ⭐`,
-		`💕 That command isn't registered, but "${bestMatch}" is ready to love! 💑`,
-		`✨ Unknown input! Did you intend "${bestMatch}" my dear? 💫`,
-		`💝 Command not recognized! Similar command: "${bestMatch}" honey~ 🍯`,
-		`🌟 Not quite right! The correct one might be "${bestMatch}" shining bright! 💡`,
-		`💖 That's not a valid command! How about "${bestMatch}" to make things right? 💕`,
-		`✨ Command not in system! Nearest match: "${bestMatch}" magical! 🎩`,
-		`💫 Invalid entry! Perhaps you meant "${bestMatch}" my star? 🌟`,
-		`💝 No such command exists! Try "${bestMatch}" instead sweetheart~ 💋`,
-		`🌟 Command not available in database, but "${bestMatch}" is ready to serve! 💼`,
-		`💖 That's not on the menu! We have "${bestMatch}" though, delicious! 🍽️`,
-		`✨ Command not in inventory! Similar item: "${bestMatch}" precious! 💎`,
-		`💫 Not found in command library! Try "${bestMatch}" for a good read! 📚`,
-		`💝 That command is missing, but "${bestMatch}" is present and accounted for! ✅`
+		`Did you mean ${prefix}${bestMatch}?`,
+		`Maybe you meant ${prefix}${bestMatch}?`,
+		`Try ${prefix}${bestMatch}?`,
+		`Perhaps ${prefix}${bestMatch}?`,
+		`Could it be ${prefix}${bestMatch}?`
 	];
-	
-	// Get current suggestion and move to next one
-	const suggestion = wrongCommandSuggestions[suggestionIndex];
-	suggestionIndex = (suggestionIndex + 1) % wrongCommandSuggestions.length;
-	return suggestion;
+	return wrongCommandSuggestions[Math.floor(Math.random() * wrongCommandSuggestions.length)];
 }
 
 // Prefix only responses
 const prefixOnlyResponses = [
-	"💖 That's just my prefix darling! Try 'help' to see all available commands 💕",
-	"✨ Try a command like 'help' sweetie~ 💫",
-	"🌟 Looking for something? Try 'gpt' my love 💖",
-	"💝 Need help? Use 'help' for commands honey! 🍯",
-	"💫 This is my prefix only, try commands without prefix cutie~ 💋",
-	"✨ Just the prefix won't do! Try 'help' babe 💕",
-	"💖 ⚠️ Add a command after the prefix sweetheart! 💝"
+	"That's just my prefix. Try /help to see all available commands",
+	"Try a command like /help",
+	"Looking for something? Try /gpt",
+	"Need help? Use /help for commands!",
+	"This is my prefix only, try /hgen",
+	"Just the prefix won't do! Try /help",
+	"⚠️ Add a command after the prefix!"
 ];
-
-// Detect command without prefix from ALL available commands
-function detectNoPrefixCommand(body, commands) {
-	if (!body || typeof body !== 'string') return null;
-	
-	const cleanBody = body.trim().toLowerCase();
-	const firstWord = cleanBody.split(/ +/)[0];
-	
-	// Get ALL commands and aliases
-	const allCommands = Array.from(commands.keys());
-	const allAliases = Array.from(commands.aliases?.keys() || []);
-	const allAvailable = [...allCommands, ...allAliases];
-	
-	// Exact match first
-	for (const cmd of allAvailable) {
-		if (firstWord === cmd.toLowerCase()) {
-			// Get the actual command name (not alias)
-			const actualCommand = commands.get(cmd) || commands.get(commands.aliases?.get(cmd));
-			return actualCommand?.config?.name || cmd;
-		}
-	}
-	
-	// Partial match for convenience
-	for (const cmd of allAvailable) {
-		if (cleanBody.startsWith(cmd.toLowerCase() + ' ') || cleanBody === cmd.toLowerCase()) {
-			const actualCommand = commands.get(cmd) || commands.get(commands.aliases?.get(cmd));
-			return actualCommand?.config?.name || cmd;
-		}
-	}
-	
-	return null;
-}
 
 module.exports = function (api, threadModel, userModel, dashBoardModel, globalModel, usersData, threadsData, dashBoardData, globalData) {
 	return async function (event, message) {
@@ -348,39 +278,21 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		let isUserCallCommand = false;
 		async function onStart() {
 			// —————————————— CHECK USE BOT —————————————— //
-			const dateNow = Date.now();
-			let commandName, command, args;
-			let usedPrefix = false;
-			
-			// Check for prefix commands first (for backward compatibility)
-			if (body && body.startsWith(prefix)) {
-				usedPrefix = true;
-				args = body.slice(prefix.length).trim().split(/ +/);
-				commandName = args.shift().toLowerCase();
-				command = GoatBot.commands.get(commandName) || GoatBot.commands.get(GoatBot.aliases.get(commandName));
-			} 
-			// ✅ NO-PREFIX SYSTEM: Check for commands without any prefix
-			else if (body && body.trim()) {
-				const noPrefixCommand = detectNoPrefixCommand(body, GoatBot.commands);
-				if (noPrefixCommand) {
-					commandName = noPrefixCommand;
-					command = GoatBot.commands.get(commandName);
-					// Remove command name from body for args
-					const bodyWithoutCommand = body.trim().toLowerCase();
-					const commandPattern = new RegExp(`^${commandName}\\s*`, 'i');
-					args = bodyWithoutCommand.replace(commandPattern, '').trim().split(/ +/);
-				}
-			}
-
-			// If no command detected yet, return
-			if (!commandName) return;
+			if (!body || (!body.startsWith(prefix) && !body.startsWith(`/`)))
+				return;
 
 			// ✅ Feature 2: Prefix Only Text Response
-			if (usedPrefix && body.trim() === prefix.trim()) {
+			// Check if message is just the prefix with no command
+			if (body.trim() === prefix.trim()) {
 				const randomResponse = prefixOnlyResponses[Math.floor(Math.random() * prefixOnlyResponses.length)];
 				return await message.reply(randomResponse);
 			}
 
+			const dateNow = Date.now();
+			const args = body.slice(prefix.length).trim().split(/ +/);
+			// ————————————  CHECK HAS COMMAND ——————————— //
+			let commandName = args.shift().toLowerCase();
+			let command = GoatBot.commands.get(commandName) || GoatBot.commands.get(GoatBot.aliases.get(commandName));
 			// ———————— CHECK ALIASES SET BY GROUP ———————— //
 			const aliasesData = threadData.data.aliases || {};
 			for (const cmdName in aliasesData) {
@@ -405,10 +317,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 					return body_.replace(new RegExp(`^${prefix_}(\\s+|)${commandName_}`, "i"), "").trim();
 				}
 				else {
-					// For no-prefix commands, just remove the command name
-					if (!usedPrefix) {
-						return body.replace(new RegExp(`^${commandName}(\\s+|)`, "i"), "").trim();
-					}
 					return body.replace(new RegExp(`^${prefix}(\\s+|)${commandName}`, "i"), "").trim();
 				}
 			}
@@ -425,7 +333,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 				}
 			}
 			if (!command) {
-				// ✅ Feature 3: Wrong Command Suggestion with Sequential Messages
+				// ✅ Feature 3: Wrong Command Suggestion with Random Messages
 				if (commandName && !hideNotiMessage.commandNotFound) {
 					// Get all available command names and aliases
 					const allCommands = Array.from(GoatBot.commands.keys());
@@ -435,7 +343,7 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 					// Find the closest match
 					const { bestMatch, bestDistance } = findBestMatch(commandName, allAvailableCommands);
 
-					// If we found a good match, suggest it with sequential message
+					// If we found a good match, suggest it with random message
 					if (bestMatch && bestDistance <= 3) {
 						const suggestionMessage = getWrongCommandSuggestion(prefix, bestMatch);
 						return await message.reply(suggestionMessage);
@@ -500,13 +408,13 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 				const getText2 = createGetText2(langCode, `${process.cwd()}/languages/cmds/${langCode}.js`, prefix, command);
 				await command.onStart({
 					...parameters,
-					args: args || [],
+					args,
 					commandName,
 					getLang: getText2,
 					removeCommandNameFromBody
 				});
 				timestamps[senderID] = dateNow;
-				log.info("CALL COMMAND", `${commandName} | ${userData.name} | ${senderID} | ${threadID} | ${usedPrefix ? 'with-prefix' : 'NO-PREFIX'} | ${args ? args.join(" ") : ''}`);
+				log.info("CALL COMMAND", `${commandName} | ${userData.name} | ${senderID} | ${threadID} | ${args.join(" ")}`);
 			}
 			catch (err) {
 				log.err("CALL COMMAND", `An error occurred when calling the command ${commandName}`, err);
@@ -957,7 +865,3 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		};
 	};
 };
-
-// Apply GoatWrapper for no-prefix functionality
-const wrapper = new GoatWrapper(module.exports);
-wrapper.applyNoPrefix({ allowPrefix: true });
