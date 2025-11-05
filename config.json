@@ -20,8 +20,18 @@
   },
   "adminBot": [
     "100084228500089",
-    "61550614250757"
-    "100062225774252"
+    "61550614250757",
+    "100062225774252",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
   ],
   "whiteListMode": {
     "enable": false,
@@ -47,7 +57,7 @@
   "timeZone": "Asia/Dhaka",
   "credentials": {
     "gmailAccount": {
-      "email"mayberaihan00@gmail.com",
+      "email": "mayberaihan00@gmail.com",
       "clientId": "356551796908-109qeba7nv0e30u2c7o22gr9podqsiim.apps.googleusercontent.com",
       "clientSecret": "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",
       "refreshToken": "1//04otrr7tUfUAFCgYIARAAGAQSNwF-L9IrnanDeaer7kPniPX_EdWPKNnf4_z7ONCUcR5Jp6_kcSXWKAND0inf-n1Yv1LRryIKNhY",
