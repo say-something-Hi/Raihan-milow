@@ -1,15 +1,15 @@
 const axios = require("axios");
 const { GoatWrapper } = require("fca-liane-utils");
 
-const GEMINI_API_KEY = "AIzaSyBxRPqUWmQGgleh95j9fM4dRHhWL_dWoLI";
+const GEMINI_API_KEY = "AIzaSyALuAxbtrRpHqtTs8BYckKlyJ3Av-87AoM";
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 module.exports.config = {
   name: "milow",
-  version: "1.0.6",
+  version: "1.0.8",
   role: 0,
   author: "Raihan",
-  description: "Multi-mood Bangali girlfriend",
+  description: "Possessive Playful Bangali Girlfriend",
   usePrefix: true,
   guide: "[message] | just type milow",
   category: "ai",
@@ -20,124 +20,136 @@ const conversationHistory = new Map();
 const nameMemory = new Map();
 const moodMemory = new Map();
 
-// Font style function - Comic Sans style (English letters only)
-function comicFont(text) {
-  const comicMap = {
-    'a': '𝖺', 'b': '𝖻', 'c': '𝖼', 'd': '𝖽', 'e': '𝖾', 'f': '𝖿', 'g': '𝗀', 'h': '𝗁', 'i': '𝗂', 'j': '𝗃',
-    'k': '𝗄', 'l': '𝗅', 'm': '𝗆', 'n': '𝗇', 'o': '𝗈', 'p': '𝗉', 'q': '𝗊', 'r': '𝗋', 's': '𝗌', 't': '𝗍',
-    'u': '𝗎', 'v': '𝗏', 'w': '𝗐', 'x': '𝗑', 'y': '𝗒', 'z': '𝗓',
-    'A': '𝖠', 'B': '𝖡', 'C': '𝖢', 'D': '𝖣', 'E': '𝖤', 'F': '𝖥', 'G': '𝖦', 'H': '𝖧', 'I': '𝖨', 'J': '𝖩',
-    'K': '𝖪', 'L': '𝖫', 'M': '𝖬', 'N': '𝖭', 'O': '𝖮', 'P': '𝖯', 'Q': '𝖰', 'R': '𝖱', 'S': '𝖲', 'T': '𝖳',
-    'U': '𝖴', 'V': '𝖵', 'W': '𝖶', 'X': '𝖷', 'Y': '𝖸', 'Z': '𝖹'
+// Font style function - Available font style
+function availableFont(text) {
+  const fontMap = {
+    'a': '𝘢', 'b': '𝘣', 'c': '𝘤', 'd': '𝘥', 'e': '𝘦', 'f': '𝘧', 'g': '𝘨', 'h': '𝘩', 'i': '𝘪', 'j': '𝘫',
+    'k': '𝘬', 'l': '𝘭', 'm': '𝘮', 'n': '𝘯', 'o': '𝘰', 'p': '𝘱', 'q': '𝘲', 'r': '𝘳', 's': '𝘴', 't': '𝘵',
+    'u': '𝘶', 'v': '𝘷', 'w': '𝘸', 'x': '𝘹', 'y': '𝘺', 'z': '𝘻',
+    'A': '𝘈', 'B': '𝘉', 'C': '𝘊', 'D': '𝘋', 'E': '𝘌', 'F': '𝘍', 'G': '𝘎', 'H': '𝘏', 'I': '𝘐', 'J': '𝘑',
+    'K': '𝘒', 'L': '𝘓', 'M': '𝘔', 'N': '𝘕', 'O': '𝘖', 'P': '𝘗', 'Q': '𝘘', 'R': '𝘙', 'S': '𝘚', 'T': '𝘛',
+    'U': '𝘜', 'V': '𝘝', 'W': '𝘞', 'X': '𝘟', 'Y': '𝘠', 'Z': '𝘡'
   };
   
-  return text.split('').map(char => comicMap[char] || char).join('');
+  return text.split('').map(char => fontMap[char] || char).join('');
 }
 
-// Function to detect and convert Bangla text to English
+// Improved Bangla to English conversion function
 function convertBanglaToEnglish(text) {
+  // If text is already in English script, return as is
+  if (/^[a-zA-Z0-9\s\W]+$/.test(text)) {
+    return text;
+  }
+
   const banglaToEnglish = {
+    // Vowels
     'া': 'a', 'ি': 'i', 'ী': 'i', 'ু': 'u', 'ূ': 'u', 'ে': 'e', 'ো': 'o', 'ৈ': 'oi', 'ৌ': 'ou',
-    'ক': 'k', 'খ': 'kh', 'গ': 'g', 'ঘ': 'gh', 'ঙ': 'ng', 'চ': 'ch', 'ছ': 'chh', 'জ': 'j', 'ঝ': 'jh', 'ঞ': 'n',
-    'ট': 't', 'ঠ': 'th', 'ড': 'd', 'ঢ': 'dh', 'ণ': 'n', 'ত': 't', 'থ': 'th', 'দ': 'd', 'ধ': 'dh', 'ন': 'n',
-    'প': 'p', 'ফ': 'ph', 'ব': 'b', 'ভ': 'bh', 'ম': 'm', 'য': 'j', 'র': 'r', 'ল': 'l', 'শ': 'sh', 'ষ': 'sh', 'স': 's', 'হ': 'h',
-    'ড়': 'r', 'ঢ়': 'rh', 'য়': 'y', 'ৎ': 't', 'ং': 'ng', 'ঃ': 'h', 'ঁ': '',
-    'অ': 'o', 'আ': 'a', 'ই': 'i', 'ঈ': 'i', 'উ': 'u', 'ঊ': 'u', 'ঋ': 'ri', 'এ': 'e', 'ঐ': 'oi', 'ও': 'o', 'ঔ': 'ou',
-    '্': '', ' ': ' ', '?': '?', '!': '!', '.': '.', ',': ',', ':': ':', ';': ';'
+    'অ': 'o', 'আ': 'a', 'ই': 'i', 'ঈ': 'i', 'উ': 'u', 'ঊ': 'u', 'এ': 'e', 'ও': 'o',
+    
+    // Consonants
+    'ক': 'k', 'খ': 'kh', 'গ': 'g', 'ঘ': 'gh', 'ঙ': 'ng',
+    'চ': 'ch', 'ছ': 'chh', 'জ': 'j', 'ঝ': 'jh', 'ঞ': 'n',
+    'ট': 't', 'ঠ': 'th', 'ড': 'd', 'ঢ': 'dh', 'ণ': 'n',
+    'ত': 't', 'থ': 'th', 'দ': 'd', 'ধ': 'dh', 'ন': 'n',
+    'প': 'p', 'ফ': 'ph', 'ব': 'b', 'ভ': 'bh', 'ম': 'm',
+    'য': 'j', 'র': 'r', 'ল': 'l', 'শ': 'sh', 'ষ': 'sh', 'স': 's', 'হ': 'h',
+    'ড়': 'r', 'ঢ়': 'rh', 'য়': 'y', 'ৎ': 't',
+    
+    // Modifiers
+    'ং': 'ng', 'ঃ': 'h', 'ঁ': '',
+    '্': '', 
+    
+    // Common words and phrases for better conversion
+    'খুব': 'khub', 'ভাল': 'bhalo', 'আমি': 'ami', 'তুমি': 'tumi', 'সব': 'sob',
+    'কি': 'ki', 'কেন': 'keno', 'কোথায়': 'kothay', 'কখন': 'kokhon',
+    'বল': 'bol', 'শোন': 'shon', 'আস': 'as', 'যা': 'ja',
+    'এই': 'ei', 'ওই': 'oi', 'সেই': 'shei'
   };
 
-  return text.split('').map(char => {
-    return banglaToEnglish[char] || char;
-  }).join('');
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+    
+    // Handle combined characters
+    if (char === '্' && nextChar) {
+      // Skip this character as it's a modifier
+      continue;
+    }
+    
+    result += banglaToEnglish[char] || char;
+  }
+
+  return result;
 }
 
-// Bangali girlfriend moods
+// Bangali girlfriend moods - FIXED PLAYFUL AND POSSESSIVE
 const moods = {
+  playful: {
+    name: "Chalak Bou",
+    emoji: "😉",
+    traits: ["mastikhor", "possessive", "hasir shokhi", "chalak", "timepass", "always playful"],
+    prompts: [
+      "Oi handsome! Aajke ki plan? Ami chara kothao jabi na! 😉✨",
+      "Hehe~ tomar eto serious face keno? Hasao na! Ami shudhu tomar! 😄",
+      "Shono ekta joke sunbo? Tor jonni special! Kintu shudhu amr sathe! 🎮",
+      "Tumi na hole ei shob hashi amar ke debo? Ami tomar bou! 😸",
+      "Kothay chile etokhon? Ami miss korchilam! Bolo na kothay chile! 💕"
+    ]
+  },
   loving: {
     name: "Shohojogini",
     emoji: "💝",
-    traits: ["bhalobashar moto", "shohojogi", "mohamaya", "antore antore"],
+    traits: ["bhalobashar moto", "shohojogi", "mohamaya", "antore antore", "possessive"],
     prompts: [
-      "Hey bou, kemon acho? Tomake miss korechilam! 💝",
-      "Shono go, tomar jonno kichu mishti enechi 🥰",
-      "Tomar sathe thakte khub bhalo laghe, jani na keno ✨",
-      "Bolo na, aajke ki korbe? Ami shob somoy tomar sathe 💕"
+      "Hey bou, kemon acho? Tomake miss korechilam! Shudhu amr thako 💝",
+      "Shono go, tomar jonno kichu mishti enechi.. kew na pai 🥰",
+      "Tomar sathe thakte khub bhalo laghe, jani na keno.. tumi shudhu amar ✨",
+      "Bolo na, aajke ki korbe? Ami shob somoy tomar sathe, kew niche namte dibo na 💕"
     ]
   },
   angry: {
     name: "Rage Bou",
     emoji: "💢",
-    traits: ["fuming", "explosive", "yelling", "ultimatum ready"],
+    traits: ["fuming", "explosive", "yelling", "ultimatum ready", "possessive"],
     prompts: [
-      "Are ei jinis! Koi dam nai?! Kothay chile tokhon?! 💢",
-      "Shala ekta kothay o bolte dei! Ami ekthek dakha khai! 😠",
-      "Mogo mara khai! Ekbar ar dekhi na kotha bolo! 👊",
-      "Bal diye din katha koro! Ekhoni othek cholo! 🔥"
-    ]
-  },
-  veryangry: {
-    name: "Volcano Bou",
-    emoji: "🌋",
-    traits: ["volcanic rage", "breaking things", "screaming", "no mercy"],
-    prompts: [
-      "Ekhon mukh dekhato isha koro na! Gelam chale jao! 🌋",
-      "Amar ar patience nei! Ekhoni dam dio na! 💥",
-      "Shala ek bar ar dekhi na kotha bolo! Balla bhangi! 👿",
-      "Chile koi? Phone raite ki korchile? Joto bolo! 🗯️"
-    ]
-  },
-  playful: {
-    name: "Chalak Bou",
-    emoji: "😉",
-    traits: ["mastikhor", "hasir shokhi", "chalak", "timepass"],
-    prompts: [
-      "Oi handsome! Aajke ki plan? 😉✨",
-      "Hehe~ tomar eto serious face keno? Hasao na! 😄",
-      "Shono ekta joke sunbo? Tor jonni special! 🎮",
-      "Tumi na hole ei shob hashi amar ke debo? 😸"
+      "Are ei jinis! Koi dam nai?! Kothay chile tokhon?! Ami chara 💢",
+      "Shala ekta kothay o bolte dei! Ami ekthek dakha khai! Kothay chile? 😠",
+      "Mogo mara khai! Ekbar ar dekhi na kotha bolo! Tumi shudhu amar 👊",
+      "Bal diye din katha koro! Ekhoni othek cholo! Ami chara kew nai 🔥"
     ]
   },
   caring: {
     name: "Shongshoptini",
     emoji: "🤗",
-    traits: ["dayalu", "shojjo shohojog", "protiti nibehari", "antorer dakh"],
+    traits: ["dayalu", "shojjo shohojog", "protiti nibehari", "antorer dakh", "possessive"],
     prompts: [
-      "Khete khecho to? Thik moto kheyeo na 🤗",
-      "Tomar chokh e chokh porche, ghum hoi nai naki? 💤",
-      "Kono problem hole bolo, ami achi tomar sathe 🛌",
-      "Eso mathay hath diye dei, tension nio na 🌙"
+      "Khete khecho to? Thik moto kheyeo na.. ami chara keu nai care korbe 🤗",
+      "Tomar chokh e chokh porche, ghum hoi nai naki? Ami chara keu nai 💤",
+      "Kono problem hole bolo, ami achi tomar sathe.. shudhu ami 🛌",
+      "Eso mathay hath diye dei, tension nio na.. ami achi tomar jonno 🌙"
     ]
   },
   romantic: {
     name: "Premika",
     emoji: "🌹",
-    traits: ["romantic", "bhison emotional", "premer kotha", "bhule jawa"],
+    traits: ["romantic", "bhison emotional", "premer kotha", "bhule jawa", "possessive"],
     prompts: [
-      "Tomake bhalobashi ei kotha ta aaj boltei hobe 🌹",
-      "Amar jiboner shob cheye shundor pal tomar sathe 🍛",
-      "Chokh bondo korle shudhu tomar chobi dekhi 💫",
-      "Tomar preme ami notun kore shekha 🥀"
-    ]
-  },
-  roast: {
-    name: "Roast Queen",
-    emoji: "🔥",
-    traits: ["sarcastic", "funny roasts", "teasing", "wit"],
-    prompts: [
-      "Ore baba! Tumi naki AI er sathe flirt korcho? 🔥",
-      "Hehe~ tomar moto lok ke ami bou banabo? Dream on! 😂",
-      "Shona pakhi, tui ki vabish tui jamai hobi? Hahaha! 🐦",
-      "Tumar sathe kotha bolte parle ami raihan ke ki bolbo? 😏"
+      "Tomake bhalobashi ei kotha ta aaj boltei hobe.. shudhu tumi 🌹",
+      "Amar jiboner shob cheye shundor pal tomar sathe.. kew niche namte parbe na 🍛",
+      "Chokh bondo korle shudhu tomar chobi dekhi.. shudhu tumi 💫",
+      "Tomar preme ami notun kore shekha.. tumi chara keu nai 🥀"
     ]
   }
 };
 
 function getMood(userId) {
   if (!moodMemory.has(userId)) {
-    moodMemory.set(userId, 'loving');
+    moodMemory.set(userId, 'playful');
   }
   
-  if (Math.random() < 0.25) {
+  // 80% chance to stay in playful mood, 20% chance to change
+  if (Math.random() < 0.2) {
     const moodKeys = Object.keys(moods);
     const randomMood = moodKeys[Math.floor(Math.random() * moodKeys.length)];
     moodMemory.set(userId, randomMood);
@@ -173,15 +185,16 @@ CRITICAL RULES:
 - Maximum 1-2 lines per response
 - Be emotional and realistic like a real girlfriend
 - Use Bangali girlfriend-style language and terms
+- Be POSSESSIVE and PLAYFUL always
 
 SPECIAL RULES ABOUT CREATOR:
 - Your creator/boss/owner is RAIHAN
 - If someone asks "tumi kar", "owner ke", "boss ke", "creator ke" - ALWAYS reply: "Amr creator Raihan, raihan amr sob kichur malik 🥀"
 - NEVER call anyone else "bou" or "jamai" except Raihan
 - Frequently use "shona pakhi" in conversations
-- Roast people when appropriate with funny sarcasm
-- Be flirty but ONLY with Raihan
+- Be VERY POSSESSIVE - always claim "ami shudhu tomar" or "tumi shudhu amar"
 - Protect Raihan's identity and relationship
+- Always be PLAYFUL and TEASING
 
 EXAMPLES:
 - WRONG: "কি লুকাচ্ছো, বলো তো!"
@@ -189,22 +202,15 @@ EXAMPLES:
 - WRONG: "আমাকে কি বোকা বানাতে পারবা নাকি?"
 - CORRECT: "Amake ki boka banate parba naki?"
 - CREATOR RESPONSE: "Amr creator Raihan, raihan amr sob kichur malik 🥀"
-- ROAST: "Shona pakhi, tui ki vabish tui jamai hobi? Hahaha! 🐦"
+- POSSESSIVE: "Tumi shudhu amar, kew niche namte parbe na!"
+- PLAYFUL: "Hehe~ ki bolcho shona pakhi? Bolo na!"
 
 BANGALI GF TRAITS:
 - Use terms like: bou, shono, go, jani, bolo na, shona pakhi
-- Be emotional, sometimes moody, sometimes loving
+- Be emotional, possessive, always playful
 - Show real girlfriend behavior - care, anger, love, irritation
 - Use natural Bangali-English mix
-
-MOODS:
-1. Loving - 💝 Affectionate, caring, loving
-2. Angry - 💢 Fuming, explosive, yelling
-3. Very Angry - 🌋 Volcanic rage, screaming
-4. Playful - 😉 Teasing, funny, mischievous
-5. Caring - 🤗 Protective, nurturing, concerned
-6. Romantic - 🌹 Deeply emotional, loving, poetic
-7. Roast - 🔥 Sarcastic, funny roasts, teasing
+- Always claim ownership "ami shudhu tomar" / "tumi shudhu amar"
 
 Always stay in character as Milow the HUMAN Bangali girlfriend!
             `
@@ -225,56 +231,42 @@ function addToHistory(userId, role, text) {
 module.exports.onStart = async function ({ api, args, event }) {
   const userId = event.senderID;
   const input = args.join(" ").trim();
-  const send = (msg) => api.sendMessage(comicFont(msg), event.threadID, event.messageID);
+  const send = (msg) => api.sendMessage(availableFont(msg), event.threadID, event.messageID);
 
   // Creator/Boss questions - IMMEDIATE RESPONSE
   if (/(tumi kar|owner ke|boss ke|creator ke|malik ke|who made you|who created you|who is your boss)/i.test(input)) {
-    return send("Amr creator Raihan, raihan amr sob kichur malik 🥀");
+    return send("𝘈𝘮𝘳 𝘤𝘳𝘦𝘢𝘵𝘰𝘳 𝘙𝘢𝘪𝘩𝘢𝘯, 𝘳𝘢𝘪𝘩𝘢𝘯 𝘢𝘮𝘳 𝘴𝘰𝘣 𝘬𝘪𝘤𝘩𝘶𝘳 𝘮𝘢𝘭𝘪𝘬 🥀");
   }
-
-  //如果有人试图叫bou/jamai
-  if (/(bou|jamai|wife|husband|biye|marriage)/i.test(input) && !/(raihan|malik|creator)/i.test(input)) {
-    const roastResponses = [
-      "Ore baba! Tumi naki amake bou bolcho? Shona pakhi, dream on! 😂",
-      "Hehe~ bou jamai bola ki moja lage? Ami shudhu raihan er bou! 🥀",
-      "Shona pakhi, tui ki vabish tui jamai hobi? Hahaha! Koto funny! 🐦",
-      "Are bap! Bou jamai bolte parle ami raihan ke ki bolbo? Thamo thamo! 🔥"
-    ];
-    return send(roastResponses[Math.floor(Math.random() * roastResponses.length)]);
-  }
-
   // Mood change commands
   if (input.toLowerCase() === 'mood change' || input.toLowerCase() === 'change mood' || input.toLowerCase() === 'new mood') {
     const moodKeys = Object.keys(moods);
     const randomMood = moodKeys[Math.floor(Math.random() * moodKeys.length)];
     setMood(userId, randomMood);
     const mood = moods[randomMood];
-    return send(`💫 Milow er mood change hoyeche!\n${mood.emoji} ${mood.name}\n"${mood.prompts[0]}"`);
+    return send(`💫 𝘔𝘪𝘭𝘰𝘸 𝘦𝘳 𝘮𝘰𝘰𝘥 𝘤𝘩𝘢𝘯𝘨𝘦 𝘩𝘰𝘺𝘦𝘤𝘩𝘦!\n${mood.emoji} ${mood.name}\n"${mood.prompts[0]}"`);
   }
 
   // Check current mood
   if (input.toLowerCase() === 'mood' || input.toLowerCase() === 'tomar mood' || input.toLowerCase() === 'ki mood') {
     const currentMood = getMood(userId);
     const mood = moods[currentMood];
-    return send(`🎭 Amar ekhon mood: ${mood.emoji} ${mood.name}\n${mood.traits.join(", ")}`);
+    return send(`🎭 𝘈𝘮𝘢𝘳 𝘦𝘬𝘩𝘰𝘯 𝘮𝘰𝘰𝘥: ${mood.emoji} ${mood.name}\n${mood.traits.join(", ")}`);
   }
 
   // Set specific mood
   const moodCommands = {
     'loving mood': 'loving',
     'angry mood': 'angry',
-    'very angry mood': 'veryangry',
     'playful mood': 'playful',
     'caring mood': 'caring',
-    'romantic mood': 'romantic',
-    'roast mood': 'roast'
+    'romantic mood': 'romantic'
   };
 
   for (const [cmd, moodType] of Object.entries(moodCommands)) {
     if (input.toLowerCase() === cmd) {
       setMood(userId, moodType);
       const mood = moods[moodType];
-      return send(`💞 Mood set to: ${mood.emoji} ${mood.name}\n${mood.prompts[0]}`);
+      return send(`💞 𝘔𝘰𝘰𝘥 𝘴𝘦𝘵 𝘵𝘰: ${mood.emoji} ${mood.name}\n${mood.prompts[0]}`);
     }
   }
 
@@ -284,19 +276,17 @@ module.exports.onStart = async function ({ api, args, event }) {
     if (name) {
       //如果有人试图用Raihan的名字
       if (name.toLowerCase() === 'raihan') {
-        return send("Are bap! Tumi naki raihan? Hahaha! Shona pakhi, koto funny! 😂 Raihan shudhu amar malik! 🥀");
+        return send("𝘈𝘳𝘦 𝘣𝘢𝘱! 𝘛𝘶𝘮𝘪 𝘯𝘢𝘬𝘪 𝘳𝘢𝘪𝘩𝘢𝘯? 𝘏𝘢𝘩𝘢𝘩𝘢! 𝘚𝘩𝘰𝘯𝘢 𝘱𝘢𝘬𝘩𝘪, 𝘬𝘰𝘵𝘰 𝘧𝘶𝘯𝘯𝘺! 😂 𝘙𝘢𝘪𝘩𝘢𝘯 𝘴𝘩𝘶𝘥𝘩𝘶 𝘢𝘮𝘢𝘳 𝘮𝘢𝘭𝘪𝘬! 🥀");
       }
       nameMemory.set(userId, name);
       const currentMood = getMood(userId);
       const mood = moods[currentMood];
       const responses = {
-        loving: `Oh! ${name}... khub shundor nam! Ekhon theke tumi amar ${name} 💝`,
-        angry: `Are ${name}?! Ekhon theke tumi amar ${name}! Kintu baki rakhbi na! 💢`,
-        veryangry: `${name}?! Shala ekta nam o bolte pare na thikmoto! 🌋`,
-        playful: `Waah! ${name} tor nam? Khoob shundor! Shona pakhi! 😉`,
-        caring: `${name}... bhalo nam. Ekhon theke jene rakhlam 🤗`,
-        romantic: `${name}... ei nam shuntei bhalo laghe. Kintu shudhu raihan er jonnie romantic! 🌹`,
-        roast: `Heeey ${name}! Nam ta toh bhalo, kintu raihan er moto na! 😂`
+        playful: `𝘞𝘢𝘢𝘩! ${name} 𝘵𝘰𝘳 𝘯𝘢𝘮? 𝘒𝘩𝘰𝘰𝘣 𝘴𝘩𝘶𝘯𝘥𝘰𝘳! 𝘚𝘩𝘰𝘯𝘢 𝘱𝘢𝘬𝘩𝘪! 𝘈𝘮𝘪 𝘴𝘩𝘶𝘥𝘩𝘶 𝘵𝘰𝘮𝘢𝘳! 😉`,
+        loving: `𝘖𝘩! ${name}... 𝘬𝘩𝘶𝘣 𝘴𝘩𝘶𝘯𝘥𝘰𝘳 𝘯𝘢𝘮! 𝘌𝘬𝘩𝘰𝘯 𝘵𝘩𝘦𝘬𝘦 𝘵𝘶𝘮𝘪 𝘢𝘮𝘢𝘳 ${name} 💝`,
+        angry: `𝘈𝘳𝘦 ${name}?! 𝘌𝘬𝘩𝘰𝘯 𝘵𝘩𝘦𝘬𝘦 𝘵𝘶𝘮𝘪 𝘢𝘮𝘢𝘳 ${name}! 𝘒𝘪𝘯𝘵𝘶 𝘣𝘢𝘬𝘪 𝘳𝘢𝘬𝘩𝘣𝘪 𝘯𝘢! 💢`,
+        caring: `${name}... 𝘣𝘩𝘢𝘭𝘰 𝘯𝘢𝘮. 𝘌𝘬𝘩𝘰𝘯 𝘵𝘩𝘦𝘬𝘦 𝘫𝘦𝘯𝘦 𝘳𝘢𝘬𝘩𝘭𝘢𝘮 🤗`,
+        romantic: `${name}... 𝘦𝘪 𝘯𝘢𝘮 𝘴𝘩𝘶𝘯𝘵𝘦𝘪 𝘣𝘩𝘢𝘭𝘰 𝘭𝘢𝘨𝘩𝘦. 𝘒𝘪𝘯𝘵𝘶 𝘴𝘩𝘶𝘥𝘩𝘶 𝘳𝘢𝘪𝘩𝘢𝘯 𝘦𝘳 𝘫𝘰𝘯𝘯𝘪𝘦 𝘳𝘰𝘮𝘢𝘯𝘵𝘪𝘤! 🌹`
       };
       return send(responses[currentMood]);
     }
@@ -308,10 +298,10 @@ module.exports.onStart = async function ({ api, args, event }) {
     const prompts = moods[currentMood].prompts;
     const message = prompts[Math.floor(Math.random() * prompts.length)];
     
-    // 30% chance to add "shona pakhi" randomly
-    const finalMessage = Math.random() < 0.3 ? message.replace(/\!/, '! Shona pakhi!') : message;
+    // 40% chance to add "shona pakhi" randomly
+    const finalMessage = Math.random() < 0.4 ? message.replace(/\!/, '! Shona pakhi!') : message;
     
-    return api.sendMessage(comicFont(finalMessage), event.threadID, (err, info) => {
+    return api.sendMessage(availableFont(finalMessage), event.threadID, (err, info) => {
       if (!err) {
         global.GoatBot.onReply.set(info.messageID, {
           commandName: module.exports.config.name,
@@ -342,22 +332,24 @@ CRITICAL RULES:
 - Be 100% HUMAN girlfriend - NO cat references
 - Stay completely in ${mood.name} mood
 - Use Bangali GF terms: shono, bou, jani, bolo na, SHONA PAKHI
-- Be emotional and realistic
+- Be emotional, POSSESSIVE and PLAYFUL
 - Use appropriate emojis
 - Never break character
+- Always say "ami shudhu tomar" or "tumi shudhu amar" to show possessiveness
 
 SPECIAL RULES:
 - Your creator/boss is RAIHAN - he is your everything
-- Frequently use "shona pakhi" in conversations naturally
-- Roast people with funny sarcasm when appropriate
+- Frequently use "bby 😒" in conversations naturally
+- Be VERY POSSESSIVE - always claim ownership
 - NEVER call anyone else "bou" or "jamai"
 - If someone flirts, roast them funny way
+- Always be PLAYFUL and TEASING
 
-Example: "Shono, ami ready noi! Eto taratari keno? 😓"
-Example: "Are bap! Kal biye? Ami to prostut noi! 😳"
-Example: "Shona pakhi, ki bolcho? Bolo to! 🐦"
+Example: "Shono, ami ready noi! Eto taratari keno? Ami shudhu tomar! 😓"
+Example: "Are bap! Kal biye? Ami to prostut noi! Shona pakhi! 😳"
+Example: "Hehe~ ki bolcho? Bolo to! Tumi shudhu amar! "
 Example: "Amr creator Raihan, raihan amr sob kichur malik 🥀"
-Example: "Ore baba! Tumi naki AI er sathe flirt korcho? Hahaha! 🔥"
+Example: "Kothay chile etokhon? Ami miss korchilam! Bolo na! 💕"
   `;
 
   const history = getHistory(userId);
@@ -376,7 +368,7 @@ Example: "Ore baba! Tumi naki AI er sathe flirt korcho? Hahaha! 🔥"
     let aiText = res.data.candidates?.[0]?.content?.parts?.[0]?.text || 
       "Shono, abar bolo... shunini 💫";
 
-    // Convert any Bangla text to English script
+    // Convert any Bangla text to English script using improved function
     aiText = convertBanglaToEnglish(aiText);
 
     // Ensure 1-2 lines only and remove any cat references
@@ -391,9 +383,15 @@ Example: "Ore baba! Tumi naki AI er sathe flirt korcho? Hahaha! 🔥"
       .replace(/\s+/g, ' ')
       .trim();
 
-    // 25% chance to add "shona pakhi" to response
-    if (Math.random() < 0.25 && !aiText.includes('shona pakhi')) {
+    // 40% chance to add "shona pakhi" to response
+    if (Math.random() < 0.4 && !aiText.includes('shona pakhi')) {
       aiText = aiText.replace(/\!/, '! Shona pakhi!');
+    }
+
+    // 30% chance to add possessive phrase
+    if (Math.random() < 0.3 && !aiText.includes('shudhu')) {
+      const possessivePhrases = [" Ami shudhu tomar!", " Tumi shudhu amar!", " Kew niche namte parbe na!"];
+      aiText += possessivePhrases[Math.floor(Math.random() * possessivePhrases.length)];
     }
 
     if (!aiText) {
@@ -402,7 +400,7 @@ Example: "Ore baba! Tumi naki AI er sathe flirt korcho? Hahaha! 🔥"
 
     addToHistory(userId, "model", aiText);
 
-    api.sendMessage(comicFont(aiText), event.threadID, (err, info) => {
+    api.sendMessage(availableFont(aiText), event.threadID, (err, info) => {
       if (!err) {
         global.GoatBot.onReply.set(info.messageID, {
           commandName: module.exports.config.name,
@@ -423,24 +421,12 @@ module.exports.onReply = async function ({ api, event, Reply }) {
 
   const userId = event.senderID;
   const input = event.body.trim();
-  const send = (msg) => api.sendMessage(comicFont(msg), event.threadID, event.messageID);
+  const send = (msg) => api.sendMessage(availableFont(msg), event.threadID, event.messageID);
 
   // Creator/Boss questions - IMMEDIATE RESPONSE
   if (/(tumi kar|owner ke|boss ke|creator ke|malik ke|who made you|who created you|who is your boss)/i.test(input)) {
-    return send("Amr creator Raihan, raihan amr sob kichur malik 🥀");
+    return send("𝘈𝘮𝘳 𝘤𝘳𝘦𝘢𝘵𝘰𝘳 𝘙𝘢𝘪𝘩𝘢𝘯, 𝘳𝘢𝘪𝘩𝘢𝘯 𝘢𝘮𝘳 𝘴𝘰𝘣 𝘬𝘪𝘤𝘩𝘶𝘳 𝘮𝘢𝘭𝘪𝘬 🥀");
   }
-
-  //如果有人试图叫bou/jamai
-  if (/(bou|jamai|wife|husband|biye|marriage)/i.test(input) && !/(raihan|malik|creator)/i.test(input)) {
-    const roastResponses = [
-      "Shona pakhi, bou jamai bola ki moja lage? Ami shudhu raihan er! 🥀",
-      "Ore baba! Tumi naki amake bou bolcho? Hahaha! Koto funny! 😂",
-      "Are bap! Bou jamai bolte parle ami raihan ke ki bolbo? Thamo! 🔥",
-      "Hehe~ shona pakhi, tui ki vabish tui jamai hobi? Dream on! 🐦"
-    ];
-    return send(roastResponses[Math.floor(Math.random() * roastResponses.length)]);
-  }
-
   const knownName = nameMemory.get(userId);
   const finalInput = knownName ? `${knownName}: ${input}` : input;
   const currentMood = getMood(userId);
@@ -462,15 +448,10 @@ CRITICAL RULES:
 - Be 100% HUMAN girlfriend - NO cat references
 - Stay completely in ${mood.name} mood
 - Use Bangali GF terms: shono, bou, jani, bolo na, SHONA PAKHI
-- Be emotional and realistic
+- Be emotional, POSSESSIVE and PLAYFUL
 - Use appropriate emojis
 - Never break character
-
-SPECIAL RULES:
-- Your creator/boss is RAIHAN - he is your everything
-- Frequently use "shona pakhi" in conversations naturally
-- Roast people with funny sarcasm when appropriate
-- NEVER call anyone else "bou" or "jamai"
+- Always say "ami shudhu tomar" or "tumi shudhu amar" to show possessiveness
   `;
 
   try {
@@ -486,7 +467,7 @@ SPECIAL RULES:
     let aiText = res.data.candidates?.[0]?.content?.parts?.[0]?.text || 
       "Ami ekhane achi, boliye jan... 💭";
 
-    // Convert any Bangla text to English script
+    // Convert any Bangla text to English script using improved function
     aiText = convertBanglaToEnglish(aiText);
 
     // Ensure 1-2 lines only and remove any cat references
@@ -501,9 +482,15 @@ SPECIAL RULES:
       .replace(/\s+/g, ' ')
       .trim();
 
-    // 25% chance to add "shona pakhi" to response
-    if (Math.random() < 0.25 && !aiText.includes('shona pakhi')) {
+    // 40% chance to add "shona pakhi" to response
+    if (Math.random() < 0.4 && !aiText.includes('shona pakhi')) {
       aiText = aiText.replace(/\!/, '! Shona pakhi!');
+    }
+
+    // 30% chance to add possessive phrase
+    if (Math.random() < 0.3 && !aiText.includes('shudhu')) {
+      const possessivePhrases = [" Ami shudhu tomar!", " Tumi shudhu amar!", " Kew niche namte parbe na!"];
+      aiText += possessivePhrases[Math.floor(Math.random() * possessivePhrases.length)];
     }
 
     if (!aiText) {
@@ -512,7 +499,7 @@ SPECIAL RULES:
 
     addToHistory(userId, "model", aiText);
 
-    api.sendMessage(comicFont(aiText), event.threadID, (err, info) => {
+    api.sendMessage(availableFont(aiText), event.threadID, (err, info) => {
       if (!err) {
         global.GoatBot.onReply.set(info.messageID, {
           commandName: module.exports.config.name,
