@@ -1,126 +1,19 @@
 const fs = require("fs-extra");
 const nullAndUndefined = [undefined, null];
-const leven = require('leven'); // <--- Levenshtein Distance লাইব্রেরি
-
 // const { config } = global.GoatBot;
 // const { utils } = global;
-
-// Add the async function for group authorization check
-async function checkGroupAuthorization(isGroup, config, senderID, commandName, threadData, message) {
-	if (isGroup && !config.adminBot.includes(senderID)) {
-		if (commandName !== "approve" && threadData.data.groupApproved !== true) {
-			await message.reply("⚠️ This group is not authorized to use the bot. Contact a bot administrator for approval. /n Or Join BOT support group to place your approval https://m.me/j/AbYP0EG_FgmtmJ99/");
-			return true; // Indicates check failed, execution should stop
-		}
-	}
-	return false; // Indicates check passed
-}
-
-// Find best matching command
-function findBestMatch(inputCommand, allCommands) {
-	let bestMatch = null;
-	let bestDistance = Infinity;
-	const maxDistance = Math.ceil(inputCommand.length * 0.6);
-
-	for (const availableCommand of allCommands) {
-		const distance = levenshteinDistance(inputCommand.toLowerCase(), availableCommand.toLowerCase());
-		if (distance < bestDistance && distance <= maxDistance) {
-			bestDistance = distance;
-			bestMatch = availableCommand;
-		}
-	}
-
-	return { bestMatch, bestDistance };
-}
-
-// Random command suggestions with better text
-function getWrongCommandSuggestion(prefix, bestMatch) {
-	const wrongCommandSuggestions = [
-		`✨ Oops! Did you mean ${prefix}${bestMatch}? 🤔`,
-		`🙂 Hey there! Maybe you meant ${prefix}${bestMatch}? ✨`,
-		`🤙 No worries! Try ${prefix}${bestMatch} instead! 🫵🏻`,
-		`✨ Looking for ${prefix}${bestMatch} perhaps? 🙂`,
-		`🫵🏻 Close one! Did you mean ${prefix}${bestMatch}? 🤙`,
-		`🙂 Almost got it! Maybe ${prefix}${bestMatch}? ✨`,
-		`🤙 Command not found! Try ${prefix}${bestMatch} 🫵🏻`,
-		`✨ Slight typo? Perhaps ${prefix}${bestMatch}? 🙂`,
-		`🫵🏻 That command doesn't exist! Try ${prefix}${bestMatch} 🤙`,
-		`🙂 Need help? Maybe you wanted ${prefix}${bestMatch}? ✨`,
-		`🤙 Not quite right! Did you mean ${prefix}${bestMatch}? 🫵🏻`,
-		`✨ Let me help you! Try ${prefix}${bestMatch} instead 🙂`,
-		`🫵🏻 Almost there! Maybe ${prefix}${bestMatch}? 🤙`,
-		`🙂 Command not recognized! Try ${prefix}${bestMatch} ✨`,
-		`🤙 Small mistake! Perhaps ${prefix}${bestMatch}? 🫵🏻`,
-		`✨ I think you meant ${prefix}${bestMatch}? 🙂`,
-		`🫵🏻 Not found! How about ${prefix}${bestMatch}? 🤙`,
-		`🙂 Let's try this: ${prefix}${bestMatch} ✨`,
-		`🤙 That didn't work! Maybe ${prefix}${bestMatch}? 🫵🏻`,
-		`✨ Suggestion: ${prefix}${bestMatch} might help! 🙂`
-	];
-	return wrongCommandSuggestions[Math.floor(Math.random() * wrongCommandSuggestions.length)];
-}
-
-// Prefix only responses
-const prefixOnlyResponses = [
-	`✨ That's just my prefix! Try /help to see all available commands 🙂`,
-	`🤙 Need help? Try a command like /help after the prefix! 🫵🏻`,
-	`🙂 Looking for something? Try /gpt for AI assistance! ✨`,
-	`🫵🏻 Just the prefix won't do! Try /help for commands list 🤙`,
-	`✨ This is my prefix only! Add a command like /hgen 🙂`,
-	`🤙 Prefix detected! But you need to add a command too 🫵🏻`,
-	`🙂 Hello there! Try /help to see what I can do for you ✨`,
-	`🫵🏻 That's my calling card! Now try a real command 🤙`,
-	`✨ You've got my attention! Now try /help 🙂`,
-	`🤙 Prefix recognized! What command would you like? 🫵🏻`,
-	`🙂 I'm listening! Try /help to see available options ✨`,
-	`🫵🏻 You're halfway there! Add a command after the prefix 🤙`,
-	`✨ Ready when you are! Check /help for commands 🙂`,
-	`🤙 Got the prefix! Need the command now 🫵🏻`,
-	`🙂 Excellent start! Now complete it with a command ✨`,
-	`🫵🏻 Almost! You need a command after the prefix 🤙`,
-	`✨ Good beginning! Try /help to continue 🙂`,
-	`🤙 Prefix acquired! Command needed 🫵🏻`,
-	`🙂 You've activated me! Now what would you like to do? ✨`,
-	`🫵🏻 Step one complete! Now for the command 🤙`
-];
 
 function getType(obj) {
 	return Object.prototype.toString.call(obj).slice(8, -1);
 }
 
-// <<< --- NEW: getRole FUNCTION WITH CUSTOM HIERARCHY --- >>>
 function getRole(threadData, senderID) {
-	const config = global.GoatBot.config;
-	const adminBot = config.adminBot || [];
-	const developer = config.developer || [];
-    // NEW: Get vipuser list (Assuming vipuser is in config.json for role assignment)
-	const vipuser = config.vipuser || []; 
-    
+	const adminBot = global.GoatBot.config.adminBot || [];
 	if (!senderID)
 		return 0;
 	const adminBox = threadData ? threadData.adminIDs || [] : [];
-    
-	// 4. Developer (Highest Rank - needed for Role 4 commands)
-    if (developer.includes(senderID))
-        return 4;
-    
-    // 3. AdminBot (Needed for Role 3 commands)
-    if (adminBot.includes(senderID))
-        return 3; 
-    
-    // 2. VIP User (Needed for Role 2 commands)
-	if (vipuser.includes(senderID))
-        return 2; 
-
-    // 1. Group Admin (Needed for Role 1 commands)
-    if (adminBox.includes(senderID))
-        return 1;
-    
-    // 0. All Other Users (Lowest Rank)
-    return 0;
+	return adminBot.includes(senderID) ? 2 : adminBox.includes(senderID) ? 1 : 0;
 }
-// <<< --- END: getRole FUNCTION --- >>>
-
 
 function getText(type, reason, time, targetID, lang) {
 	const utils = global.utils;
@@ -178,15 +71,7 @@ function getRoleConfig(utils, command, isGroup, threadData, commandName) {
 
 function isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, commandName, message, lang) {
 	const config = global.GoatBot.config;
-	// ✅ developerOnly, vipOnly যোগ করা হয়েছে
-	const { adminBot, developer, vipuser, hideNotiMessage, developerOnly, vipOnly } = config; 
-	
-	// Group all high roles for global checks
-	const allHighRoles = [...adminBot, ...developer, ...vipuser]; 
-    
-    // ✅ এখানে role বের করে নেওয়া হয়েছে 
-    // কারণ এটি global check এর জন্য দরকার।
-    const role = getRole(threadData, senderID); 
+	const { adminBot, hideNotiMessage } = config;
 
 	// check if user banned
 	const infoBannedUser = userData.banned;
@@ -197,44 +82,16 @@ function isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, 
 		return true;
 	}
 
-	// 1. Check if only Admin Bot (Role 3 and above)
-	// The original code was checking for Bot Admin (Role 3 in new hierarchy)
+	// check if only admin bot
 	if (
 		config.adminOnly.enable == true
-		&& !adminBot.includes(senderID) // Check if the sender is NOT AdminBot (Rank 3)
-		&& !config.developer.includes(senderID) // Check if the sender is NOT Developer (Rank 4)
-		&& !config.vipuser.includes(senderID) // Check if the sender is NOT VIP User (Rank 2)
+		&& !adminBot.includes(senderID)
 		&& !config.adminOnly.ignoreCommand.includes(commandName)
 	) {
 		if (hideNotiMessage.adminOnly == false)
-			message.reply(global.utils.getText({ lang, head: "handlerEvents" }, "onlyAdminBot", null, null, null, lang));
+			message.reply(getText("onlyAdminBot", null, null, null, lang));
 		return true;
 	}
-	
-    // 2. >>> NEW: Check for DeveloperOnly mode (VIP Users only, i.e., Role >= 2)
-    // /devonly on করলে, VIP User (Role 2) বা তার উপরের র্যাঙ্কের ইউজারদের অ্যাক্সেস থাকবে।
-	if (
-		(developerOnly?.enable == true)
-		&& role < 2 // Check if the user is less than VIP User
-		&& !(developerOnly?.ignoreCommand || []).includes(commandName)
-	) {
-		if ((hideNotiMessage.developerOnly ?? false) == false) 
-			message.reply(global.utils.getText({ lang, head: "handlerEvents" }, "onlyVipUserGlobal", null, null, null, lang)); 
-		return true;
-	}
-    
-	// 3. >>> NEW: Check for VIPOnly mode (VIP Users only, i.e., Role >= 2)
-	// /viponly on করলেও, VIP User (Role 2) বা তার উপরের র্যাঙ্কের ইউজারদের অ্যাক্সেস থাকবে।
-	if (
-		(vipOnly?.enable == true)
-		&& role < 2 // Check if the user is less than VIP User
-		&& !(vipOnly?.ignoreCommand || []).includes(commandName)
-	) {
-		if ((hideNotiMessage.vipOnly ?? false) == false)
-			message.reply(global.utils.getText({ lang, head: "handlerEvents" }, "onlyVipUserGlobal", null, null, null, lang));
-		return true;
-	}
-
 
 	// ==========    Check Thread    ========== //
 	if (isGroup == true) {
@@ -280,6 +137,81 @@ function createGetText2(langCode, pathCustomLang, prefix, command) {
 	}
 	return getText2;
 }
+
+// Levenshtein distance function for string similarity
+function levenshteinDistance(str1, str2) {
+	const matrix = [];
+	for (let i = 0; i <= str2.length; i++) {
+		matrix[i] = [i];
+	}
+	for (let j = 0; j <= str1.length; j++) {
+		matrix[0][j] = j;
+	}
+	for (let i = 1; i <= str2.length; i++) {
+		for (let j = 1; j <= str1.length; j++) {
+			if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+				matrix[i][j] = matrix[i - 1][j - 1];
+			} else {
+				matrix[i][j] = Math.min(
+					matrix[i - 1][j - 1] + 1,
+					matrix[i][j - 1] + 1,
+					matrix[i - 1][j] + 1
+				);
+			}
+		}
+	}
+	return matrix[str2.length][str1.length];
+}
+
+// Find best matching command
+function findBestMatch(inputCommand, allCommands) {
+	let bestMatch = null;
+	let bestDistance = Infinity;
+	const maxDistance = Math.ceil(inputCommand.length * 0.6);
+
+	for (const availableCommand of allCommands) {
+		const distance = levenshteinDistance(inputCommand.toLowerCase(), availableCommand.toLowerCase());
+		if (distance < bestDistance && distance <= maxDistance) {
+			bestDistance = distance;
+			bestMatch = availableCommand;
+		}
+	}
+
+	return { bestMatch, bestDistance };
+}
+
+// Random command suggestions with better text
+function getWrongCommandSuggestion(prefix, bestMatch) {
+	const wrongCommandSuggestions = [
+		`💘 Oops cutie~ did you mean ${prefix}${bestMatch}?`,
+		`😉 Arre cutie~ try ${prefix}${bestMatch}?`,
+		`💀 Aha! Could it be ${prefix}${bestMatch}?`,
+		`😎 Ooh la la! Maybe ${prefix}${bestMatch}?`,
+		`💖 Thik ache~ try ${prefix}${bestMatch}?`,
+		`😻 Purr~ did you type ${prefix}${bestMatch}?`,
+		`💞 Babe~ little typo? ${prefix}${bestMatch}?`,
+		`💫 Oopsie! Try ${prefix}${bestMatch}?`,
+		`😏 Hmm… maybe ${prefix}${bestMatch}?`,
+		`💌 Sweet typo… try ${prefix}${bestMatch}?`,
+		`🥳 Almost there! Maybe ${prefix}${bestMatch}?`,
+		`😚 Hey you… maybe ${prefix}${bestMatch}?`,
+		`💫 That sparkles! Try ${prefix}${bestMatch}?`,
+		`🫣 Hmm… looks like ${prefix}${bestMatch}?`,
+		`😻 Purr~ did you mean ${prefix}${bestMatch}?`,
+	];
+	return wrongCommandSuggestions[Math.floor(Math.random() * wrongCommandSuggestions.length)];
+}
+
+// Prefix only responses
+const prefixOnlyResponses = [
+	"That's just my prefix. Try /help to see all available commands",
+	"Try a command like /help",
+	"Looking for something? Try /gpt",
+	"Need help? Use /help for commands!",
+	"This is my prefix only, try /hgen",
+	"Just the prefix won't do! Try /help",
+	"⚠️ Add a command after the prefix!"
+];
 
 module.exports = function (api, threadModel, userModel, dashBoardModel, globalModel, usersData, threadsData, dashBoardData, globalData) {
 	return async function (event, message) {
@@ -358,6 +290,14 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			// —————————————— CHECK USE BOT —————————————— //
 			if (!body || !body.startsWith(prefix))
 				return;
+
+			// ✅ Feature 2: Prefix Only Text Response
+			// Check if message is just the prefix with no command
+			if (body.trim() === prefix.trim()) {
+				const randomResponse = prefixOnlyResponses[Math.floor(Math.random() * prefixOnlyResponses.length)];
+				return await message.reply(randomResponse);
+			}
+
 			const dateNow = Date.now();
 			const args = body.slice(prefix.length).trim().split(/ +/);
 			// ————————————  CHECK HAS COMMAND ——————————— //
@@ -393,59 +333,56 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			// —————  CHECK BANNED OR ONLY ADMIN BOX  ————— //
 			if (isBannedOrOnlyAdmin(userData, threadData, senderID, threadID, isGroup, commandName, message, langCode))
 				return;
-			if (!command)
-				if (!hideNotiMessage.commandNotFound) {
-					// <------------------- NEW FUZZY MATCHING LOGIC STARTS HERE --------------------->
-					
-					const allCommands = Array.from(GoatBot.commands.keys());
-					let closestCommand = null;
-					let minDistance = 999;
-					const distanceThreshold = 2; // Allow up to 2 character differences
-
-					// Check only if a command name was actually attempted (e.g., /halp, not just /)
-					if (commandName) {
-						for (const correctCommand of allCommands) {
-							// Check distance for the prefix-less command part
-							const distance = leven(commandName.toLowerCase(), correctCommand.toLowerCase());
-
-							if (distance < minDistance && distance <= distanceThreshold) {
-								minDistance = distance;
-								closestCommand = correctCommand;
-							}
-						}
-					}
-					
-					if (closestCommand) {
-						// Found a suggestion, use the new lang key
-						return await message.reply(
-							utils.getText({ lang: langCode, head: "handlerEvents" }, "commandNotFoundSuggestion", closestCommand, prefix)
-						);
-					} else {
-						// No suggestion or commandName was empty, fall back to original logic
-						return await message.reply(
-							commandName ?
-								utils.getText({ lang: langCode, head: "handlerEvents" }, "commandNotFound", commandName, prefix) :
-								utils.getText({ lang: langCode, head: "handlerEvents" }, "commandNotFound2", prefix)
-						);
-					}
-					// <------------------- NEW FUZZY MATCHING LOGIC ENDS HERE ----------------------->
+			
+			// —————  CHECK GROUP AUTHORIZATION  ————— //
+			if (isGroup && !config.adminBot.includes(senderID)) {
+				// Skip authorization check for approve command (admins only anyway)
+				if (commandName !== "approve" && threadData.data.groupApproved !== true) {
+					const unauthorizedMsg = "⚠️ This group is not authorized to use this bot. Contact a bot administrator for approval. /n or Join milow support group to place your approval https://m.me/j/AbYP0EG_FgmtmJ99/";
+					return await message.reply(unauthorizedMsg);
 				}
-				else
+			}
+			if (!command) {
+				// ✅ Feature 3: Wrong Command Suggestion with 200+ Random Messages
+				if (commandName && !hideNotiMessage.commandNotFound) {
+					// Get all available command names and aliases
+					const allCommands = Array.from(GoatBot.commands.keys());
+					const allAliases = Array.from(GoatBot.aliases.keys());
+					const allAvailableCommands = [...allCommands, ...allAliases];
+
+					// Find the closest match
+					const { bestMatch, bestDistance } = findBestMatch(commandName, allAvailableCommands);
+
+					// If we found a good match, suggest it with random message
+					if (bestMatch && bestDistance <= 3) {
+						const suggestionMessage = getWrongCommandSuggestion(prefix, bestMatch);
+						return await message.reply(suggestionMessage);
+					}
+
+					// If no good match found, use original error message
+					return await message.reply(
+						utils.getText({ lang: langCode, head: "handlerEvents" }, "commandNotFound", commandName, prefix)
+					);
+				}
+				else if (!hideNotiMessage.commandNotFound) {
+					return await message.reply(
+						utils.getText({ lang: langCode, head: "handlerEvents" }, "commandNotFound2", prefix)
+					);
+				}
+				else {
 					return true;
+				}
+			}
 			// ————————————— CHECK PERMISSION ———————————— //
 			const roleConfig = getRoleConfig(utils, command, isGroup, threadData, commandName);
 			const needRole = roleConfig.onStart;
 
 			if (needRole > role) {
 				if (!hideNotiMessage.needRoleToUseCmd) {
-					if (needRole == 1) // Min Rank 1: Group Admin
+					if (needRole == 1)
 						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdmin", commandName));
-					else if (needRole == 2) // Min Rank 2: VIP User
+					else if (needRole == 2)
 						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdminBot2", commandName));
-					else if (needRole == 3) // Min Rank 3: AdminBot
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyVipUser", commandName)); // Re-purposing an existing key for Rank 3 min.
-					else if (needRole == 4) // Min Rank 4: Developer Only
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyDeveloper", commandName)); // Using the Developer key for Rank 4
 				}
 				else {
 					return true;
@@ -667,7 +604,8 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		}
 
 
-		/* +------------------------------------------------+
+		/* 
+		 +------------------------------------------------+
 		 |                    ON REPLY                    |
 		 +------------------------------------------------+
 		*/
@@ -695,14 +633,10 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			const needRole = roleConfig.onReply;
 			if (needRole > role) {
 				if (!hideNotiMessage.needRoleToUseCmdOnReply) {
-					if (needRole == 1) // Min Rank 1: Group Admin
+					if (needRole == 1)
 						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdminToUseOnReply", commandName));
-					else if (needRole == 2) // Min Rank 2: VIP User
+					else if (needRole == 2)
 						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdminBot2ToUseOnReply", commandName));
-					else if (needRole == 3) // Min Rank 3: AdminBot
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyVipUserToUseOnReply", commandName)); // Re-purposing an existing key for Rank 3 min.
-					else if (needRole == 4) // Min Rank 4: Developer Only
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyDeveloperToUseOnReply", commandName)); // Using the Developer key for Rank 4
 				}
 				else {
 					return true;
@@ -740,11 +674,26 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		 +------------------------------------------------+
 		*/
 		async function onReaction() {
+			// ✅ Feature 1: Admin Reaction Unsend
+			// Check if admin reacts with 😠 emoji to unsend message
+			if (event.reaction === "😠") {
+				// Check if user is admin (role 1 = box admin, role 2 = bot admin)
+				if (role >= 1) {
+					try {
+						await api.unsendMessage(event.messageID);
+						log.info("ADMIN UNSEND", `Message ${event.messageID} unsent by admin ${senderID}`);
+						return; // Exit early after unsending
+					} catch (err) {
+						log.err("ADMIN UNSEND", `Failed to unsend message ${event.messageID}`, err);
+					}
+				}
+			}
+
 			const { onReaction } = GoatBot;
-			const Reaction = onReaction.get(messageID);
+			const Reaction = onReaction.get(event.messageID);
 			if (!Reaction)
 				return;
-			Reaction.delete = () => onReaction.delete(messageID);
+			Reaction.delete = () => onReaction.delete(event.messageID);
 			const commandName = Reaction.commandName;
 			if (!commandName) {
 				message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "cannotFindCommandName"));
@@ -761,14 +710,10 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 			const needRole = roleConfig.onReaction;
 			if (needRole > role) {
 				if (!hideNotiMessage.needRoleToUseCmdOnReaction) {
-					if (needRole == 1) // Min Rank 1: Group Admin
+					if (needRole == 1)
 						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdminToUseOnReaction", commandName));
-					else if (needRole == 2) // Min Rank 2: VIP User
+					else if (needRole == 2)
 						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyAdminBot2ToUseOnReaction", commandName));
-					else if (needRole == 3) // Min Rank 3: AdminBot
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyVipUserToUseOnReaction", commandName)); // Re-purposing an existing key for Rank 3 min.
-					else if (needRole == 4) // Min Rank 4: Developer Only
-						return await message.reply(utils.getText({ lang: langCode, head: "handlerEvents" }, "onlyDeveloperToUseOnReaction", commandName)); // Using the Developer key for Rank 4
 				}
 				else {
 					return true;
